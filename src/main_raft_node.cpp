@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <memory>
 #include <algorithm>
 #include <sstream>
 #include <string>
@@ -25,6 +26,7 @@
 #include "raft/clock.h"
 #include "raft/lock_probe.h"
 #include "raft/log_store.h"
+#include "raft/lsm_log_store.h"
 #include "raft/metrics.h"
 #include "raft/message.h"
 #include "raft/raft_node.h"
@@ -261,7 +263,7 @@ void usage(const char* argv0) {
   std::cerr << "usage: " << argv0
            << " [--group-linger-us N] [--inflight-per-peer N]"
             << " --id N --port P --peers \"1=host:port,...\""
-            << " [--data-dir DIR]\n";
+            << " [--data-dir DIR] [--log-engine file|lsm]\n";
 }
 
 }  // namespace
@@ -293,6 +295,9 @@ int main(int argc, char** argv) {
   //           已修，并有 R6 / M5.A12 守门）
   // reactor 作为可选引擎保留：--transport=reactor / RAFTKV_TRANSPORT=reactor
   bool useReactor = false;
+  // M6.1：日志引擎（--log-engine=file|lsm / RAFTK_LOG_ENGINE），**默认 file**。
+  // file = M2-M5 的既有实现（逐字节不变）；lsm = M6 新增的 LsmLogStore（设计 §2）。
+  std::string logEngine = "file";
 
   for (int i = 1; i < argc; ++i) {
     const std::string a = argv[i];
@@ -341,6 +346,10 @@ int main(int argc, char** argv) {
     } else if (a == "--group-linger-us") {
       // M5.4（决策④ 批处理调优）：组提交蓄批窗口，用于 A/B 实测取值。
       groupLingerUs = std::stoull(next("--group-linger-us"));
+    } else if (a.rfind("--log-engine=", 0) == 0) {
+      logEngine = a.substr(std::string("--log-engine=").size());
+    } else if (a == "--log-engine") {
+      logEngine = next("--log-engine");
     } else {
       usage(argv[0]);
       return 2;
@@ -350,6 +359,14 @@ int main(int argc, char** argv) {
   if (peersArg.empty()) {
     std::cerr << "--peers is required\n";
     usage(argv[0]);
+    return 2;
+  }
+
+  // M6.1（照搬 --transport 的既有模式）：环境变量可覆盖开关值。
+  if (const char* envL = ::getenv("RAFTKV_LOG_ENGINE")) logEngine = envL;
+  if (logEngine != "file" && logEngine != "lsm") {
+    std::cerr << "unknown --log-engine: " << logEngine
+              << " (expected file|lsm)\n";
     return 2;
   }
 
@@ -373,7 +390,16 @@ int main(int argc, char** argv) {
 
     Metrics metrics;  // M5.1: 进程内指标（只读；不参与任何判定）
     if (lockWaitMetrics) lockprobe::setTimingEnabled(true);
-    FileLogStore log(dataDir);
+    // M6.1：按 --log-engine 选日志引擎。lsm 臂在未把 lsm 编进本二进制时由
+    // LsmLogStore 的构造函数抛出明确错误 ⇒ main 的 catch 打印 fatal 并以非 0 退出。
+    std::unique_ptr<LogStore> logStore;
+    if (logEngine == "lsm") {
+      logStore = std::make_unique<LsmLogStore>(dataDir);
+    } else {
+      logStore = std::make_unique<FileLogStore>(dataDir);
+    }
+    std::cerr << "[raftkv-node] log-engine=" << logEngine << std::endl;
+    LogStore& log = *logStore;
     FileSnapshotStore snapshots(dataDir);  // M3.4: durable snapshots
     KvStateMachine sm;
     SteadyClock clock;

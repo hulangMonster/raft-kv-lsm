@@ -140,3 +140,138 @@ $ grep -n 'LOG_BOUND' scripts/raft_snapshot_fault.sh
 3. **未验证**：lsm `Options` 取值（`write_buffer_size`/`bloom_bits`/`max_open_files`）对 raft 日志负载是否合适（M6.1 起用默认值，M6.7 记录）。
 4. **未验证**：同一 `--data-dir` 上从 file 引擎切到 lsm 引擎是否可用（设计 §7 W6 是推理）—— M6 明确不支持，A/B 每格用全新目录。
 5. **未验证**：`~/lsm-kv` 的 R1 修复是否/何时落地（复核时点 `b1bd050` 上 `Sync()` 仍持 `commit_mu_`）—— M6.7 前重探。
+
+---
+
+## M6.1 构建接线 + 引擎开关（**零行为变更**）
+
+### 交付
+
+| 文件 | 改动 |
+|---|---|
+| `src/raft/log_entry_codec.h` | **新增**（C1 之外的 C10，见 M6.0-D3）：`encodeEntry/decodeEntry/encodeMeta/decodeMeta` + `kEntryFixedLen/kMetaPayloadLen`，命名空间 `raftkv::raft` |
+| `src/raft/lsm_log_store.h` | **新增**：`LsmLogStore` 完整签名 + 键编码助手 + `Stats`/`all()`/`walTailTruncatedBytes()` |
+| `src/raft/lsm_log_store.cpp` | **新增**（本步为**骨架**：ctor/dtor/键编码完整，其余方法 `throw std::logic_error("... not implemented (M6.2)")`；`setBoundary` 是 no-op，让失败点稳定落在 `load()`） |
+| `CMakeLists.txt` | `src/raft/lsm_log_store.cpp` 入 `raftkv_raft`；新增 `RAFTKV_LSM_DIR` cache 变量 + `add_subdirectory(... EXCLUDE_FROM_ALL)` + `target_link_libraries(raftkv_raft PUBLIC lsm)` + `RAFTK_HAVE_LSM=1`；目录不存在只 `WARNING`，**不定义** `RAFTK_HAVE_LSM` |
+| `src/main_raft_node.cpp` | `--log-engine=file\|lsm` + `RAFTKV_LOG_ENGINE`（**默认 file**）；未知值 ⇒ stderr + exit 2；store 改为 `std::unique_ptr<LogStore>` |
+| `src/raft/file_log_store.cpp` | 删除本地 `putU64/getU64/encodeEntry/decodeEntry` 与两个常量，改用共享头（**纯搬运，字节布局不变**） |
+
+### lsm 基座 pin（父代理建议②）
+
+```bash
+$ rm -rf /tmp/lsm-pin-b1bd050 && mkdir -p /tmp/lsm-pin-b1bd050
+$ git -C ~/lsm-kv archive b1bd050 | tar -x -C /tmp/lsm-pin-b1bd050
+$ git -C ~/lsm-kv rev-parse b1bd050
+b1bd0503979604683b064b553b06a405d835581f
+$ ls /tmp/lsm-pin-b1bd050 | head
+bench
+CMakeLists.txt
+docs
+scripts
+src
+tests
+```
+⇒ **M6 所用的 lsm 基座 sha = `b1bd0503979604683b064b553b06a405d835581f`**（不读 `~/lsm-kv` 活工作区）。
+
+### 构建（含 lsm；重活前先探针，探测结果 `none`）
+
+```bash
+$ ps -eo etimes,args | grep -E '[c]make --build|[l]sm_tests|[b]ench_lsm|[g]\+\+|[c]c1plus'
+<none>
+$ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DRAFTKV_LSM_DIR=/tmp/lsm-pin-b1bd050 2>&1 | tail -4
+-- Found Threads: TRUE
+-- M6: lsm engine enabled from /tmp/lsm-pin-b1bd050
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/tengyujie/raft-kv-lsm/build
+$ cmake --build build -j8      # 后台化后轮询（日志 /tmp/m61-build.log）
+[100%] Linking CXX executable bin/raftkv_raft_tests
+[100%] Built target raftkv_raft_tests
+$ grep -c 'warning:' /tmp/m61-build.log
+0
+```
+
+### 判据 1：默认路径（file）**零行为变更** —— 全量单测
+
+```bash
+$ ./build/bin/raftkv_raft_tests
+[==========] 94 tests from 15 test suites ran. (43295 ms total)
+[  PASSED  ] 94 tests.
+```
+（与 M6 起点同为 94 条用例，**一条未删/未改/未禁用**；`FAILED` 计数 0。）
+
+### 判据 2：`--log-engine=lsm`（未编译进 lsm 时）**明确报错退出，绝不静默降级**
+
+```bash
+$ cmake -S . -B build-nolsm -DCMAKE_BUILD_TYPE=Release -DRAFTKV_LSM_DIR=/nonexistent-lsm 2>&1 | grep -i 'M6:'
+  M6: lsm source not found at /nonexistent-lsm; --log-engine=lsm will fail loudly
+$ cmake --build build-nolsm --target raftkv_raft_node -j8   # 日志 /tmp/m61-nolsm.log，warning 计数 0
+$ ./build-nolsm/bin/raftkv_raft_node --id 1 --port 19993 --peers "1=127.0.0.1:19993" \
+    --data-dir /tmp/m6-smoke-nolsm --log-engine=lsm; echo "exit=$?"
+fatal: LsmLogStore: this build was configured without lsm support (no lsm source tree at configure time; re-run cmake with -DRAFTKV_LSM_DIR=<pinned lsm tree>)
+exit=1
+```
+
+### 判据 3：`--log-engine=lsm`（编译进 lsm 后）能启动（进入 ctor），随后在 `load()` 阶段明确失败
+
+```bash
+$ rm -rf /tmp/m6-smoke-lsm
+$ ./build/bin/raftkv_raft_node --id 1 --port 19991 --peers "1=127.0.0.1:19991" \
+    --data-dir /tmp/m6-smoke-lsm --log-engine=lsm; echo "exit=$?"
+[raftkv-node] log-engine=lsm
+[raftkv-node] transport=sync
+fatal: LsmLogStore::load: not implemented (M6.2)
+exit=1
+$ ls -la /tmp/m6-smoke-lsm/raft-lsm
+-rw-r--r-- 1 tengyujie tengyujie    0 10月  1 04:30 000001.log
+-rw-r--r-- 1 tengyujie tengyujie    0 10月  1 04:30 LOCK
+```
+⇒ ctor 真的 `Open` 了 lsm DB（`LOCK` + WAL `000001.log`），失败点确实在 `load()`。
+
+### 判据 4（附加，防拼写错误静默降级）：未知引擎值
+
+```bash
+$ ./build/bin/raftkv_raft_node ... --log-engine=bogus; echo "exit=$?"
+unknown --log-engine: bogus (expected file|lsm)
+exit=2
+```
+
+### 判据 5（附加）：默认 file 引擎仍可用（真实起进程）
+
+```bash
+$ timeout 2 ./build/bin/raftkv_raft_node --id 1 --port 19992 --peers "1=127.0.0.1:19992" \
+    --data-dir /tmp/m6-smoke-file; echo "exit=$?"
+[raftkv-node] log-engine=file
+[raftkv-node] transport=sync
+[raftkv-node] id=1 listening on 0.0.0.0:19992 data-dir=/tmp/m6-smoke-file
+[raftkv-node] id=1 shutdown
+exit=124          # timeout 主动杀，非节点失败
+$ ls /tmp/m6-smoke-file/raft
+meta.dat  raft.log
+```
+
+### 逐条判据状态
+
+| 判据（设计 §4-M6.1） | 状态 | 证据 |
+|---|---|---|
+| 默认路径（file）逐字节不变：`raftkv_raft_tests` 全绿 | ✅ 通过 | 94/94 PASSED，0 FAILED |
+| 两个构建均 0 warning（仓库纪律） | ✅ 通过 | `grep -c 'warning:'` = 0（build / build-nolsm） |
+| `--log-engine=lsm` 未编译进 lsm 时报错退出、stderr 明确、绝不静默降级 | ✅ 通过 | exit=1 + `fatal: LsmLogStore: this build was configured without lsm support...` |
+| `--log-engine=lsm` 编译进 lsm 后能启动（进 ctor），随后 `load()` 阶段明确错误退出 | ✅ 通过 | `raft-lsm/LOCK`+`000001.log` 已创建；`fatal: LsmLogStore::load: not implemented (M6.2)`；exit=1 |
+| 未知引擎值拒绝 | ✅ 通过（附加判据） | exit=2 + `unknown --log-engine: bogus` |
+| 「逐字节不变」的**位级**证明（file 引擎磁盘字节 == 共享 codec 输出） | ⏳ 待做（M6.2） | 本步只用「全量单测 + 纯搬运 diff」兜底；M6.2 加定向字节对拍用例 |
+
+### 偏差登记（M6.1）
+
+| ID | 设计写的 | 落地 | 裁决 |
+|---|---|---|---|
+| **M6.1-D1** | 设计 §4-M6.1 的证据命令用 `-DRAFTKV_LSM_DIR="$HOME/lsm-kv"`（活工作区） | 实测链接的是 `git archive b1bd050` 出来的 `/tmp/lsm-pin-b1bd050` | 按父代理建议②执行（活工作区可能正被另一代理改动）；CMake 默认值仍是 `$ENV{HOME}/lsm-kv`，pin 只在命令行覆盖 |
+| **M6.1-D2** | 设计 §4-M6.1：「全部方法返回 false / 抛 logic_error」 | 骨架实现里 `setBoundary` 是 **no-op**（不是抛异常） | 必须如此：`RaftNode` ctor 在 `load()` **之前**调 `setBoundary`（D3 顺序），若它抛异常，失败点就不是判据要求的 `load()` |
+| **M6.1-D3** | 设计未提 | `build/` 与 `build-nolsm/` 两个构建目录（后者只用于验证「无 lsm 也不静默降级」） | 登记；`build-nolsm` 不进提交（.gitignore 已覆盖 `build*`？M6.1 提交前确认） |
+
+### 未做 / 未验证（M6.1 时点）
+
+1. **未做**：`LsmLogStore` 的全部语义（load/append/truncate/compact/slice）—— 骨架期显式抛 `logic_error`，M6.2 落地。
+2. **未做**：`tests/raft_lsm_log_test.cpp`（M6.2）。
+3. **未验证**：lsm 引擎在真实 raft 集群下的任何行为（M6.5/M6.6/M6.7）。
+4. **未验证**：`raft-lsm` 目录的空间/恢复代价（M6.7 的 O2/O3/D3/D4）。

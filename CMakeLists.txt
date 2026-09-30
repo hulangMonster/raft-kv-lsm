@@ -57,6 +57,7 @@ add_library(raftkv_raft STATIC
   src/raft/memory_adapters.cpp
   src/raft/raft_node.cpp
   src/raft/file_log_store.cpp
+  src/raft/lsm_log_store.cpp
   src/raft/message.cpp
   src/raft/metrics.cpp
   src/raft/reactor.cpp
@@ -68,6 +69,20 @@ add_library(raftkv_raft STATIC
 )
 target_include_directories(raftkv_raft PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(raftkv_raft PUBLIC Threads::Threads)
+
+# ---- M6.1：lsm 引擎接线（设计 §8 D8）----
+# lsm 是独立仓库（~/lsm-kv），其活工作区可能正被别的代理改动 ⇒ M6 只链接 `git archive <sha>`
+# pin 出来的副本（如 /tmp/lsm-pin-b1bd050），**不读活工作区**。
+# 找不到源码 ⇒ 不定义 RAFTK_HAVE_LSM：`--log-engine=lsm` 明确报错退出，绝不静默降级。
+set(RAFTKV_LSM_DIR "$ENV{HOME}/lsm-kv" CACHE PATH "lsm-kv source tree (use a pinned copy)")
+if(EXISTS "${RAFTKV_LSM_DIR}/CMakeLists.txt")
+  add_subdirectory("${RAFTKV_LSM_DIR}" "${CMAKE_BINARY_DIR}/lsm-build" EXCLUDE_FROM_ALL)
+  target_link_libraries(raftkv_raft PUBLIC lsm)
+  target_compile_definitions(raftkv_raft PUBLIC RAFTK_HAVE_LSM=1)
+  message(STATUS "M6: lsm engine enabled from ${RAFTKV_LSM_DIR}")
+else()
+  message(WARNING "M6: lsm source not found at ${RAFTKV_LSM_DIR}; --log-engine=lsm will fail loudly")
+endif()
 
 add_executable(raftkv_raft_node src/main_raft_node.cpp)
 target_link_libraries(raftkv_raft_node PRIVATE raftkv_raft)

@@ -22,13 +22,15 @@
 #include <utility>
 
 #include "common.h"
+#include "raft/log_entry_codec.h"
 
 namespace raftkv::raft {
 
 namespace {
 
-constexpr size_t kEntryFixedLen = 41;   // 8+8+1+4+4+8+8
-constexpr size_t kMetaPayloadLen = 12;  // term(8) + votedFor(4)
+// M6.1：kEntryFixedLen / kMetaPayloadLen / encodeEntry / decodeEntry / encodeMeta /
+// decodeMeta 已抽到 raft/log_entry_codec.h —— FileLogStore 与 LsmLogStore 共用**同一份**
+// 字节布局（设计 §2.2 的「逐字复用」；原实现位于匿名 namespace，外部 TU 无法链接）。
 constexpr size_t kFrameHeaderLen = 8;   // crc(4) + len(4)
 constexpr uint32_t kMaxRecordPayload =
     kEntryFixedLen + 64u * 1024u * 1024u + 64u * 1024u;
@@ -53,17 +55,6 @@ uint32_t crc32(const Byte* data, size_t len) {
     crc = table[(crc ^ data[i]) & 0xFFu] ^ (crc >> 8);
   }
   return crc ^ 0xFFFFFFFFu;
-}
-
-void putU64(Bytes& out, uint64_t v) {
-  for (int i = 7; i >= 0; --i) {
-    out.push_back(static_cast<Byte>((v >> (i * 8)) & 0xff));
-  }
-}
-uint64_t getU64(const Byte* p) {
-  uint64_t v = 0;
-  for (int i = 0; i < 8; ++i) v = (v << 8) | p[i];
-  return v;
 }
 
 size_t readSome(int fd, void* buf, size_t len) {
@@ -100,45 +91,6 @@ void fsyncDir(const std::string& dir) {
   if (fd < 0) return;
   (void)::fsync(fd);
   ::close(fd);
-}
-
-Bytes encodeEntry(const LogEntry& e) {
-  Bytes p;
-  p.reserve(kEntryFixedLen + e.key.size() + e.value.size());
-  putU64(p, e.index);
-  putU64(p, e.term);
-  p.push_back(static_cast<Byte>(e.op));
-  putU32(p, static_cast<uint32_t>(e.key.size()));
-  putU32(p, static_cast<uint32_t>(e.value.size()));
-  putU64(p, e.clientId);
-  putU64(p, e.requestId);
-  p.insert(p.end(), e.key.begin(), e.key.end());
-  p.insert(p.end(), e.value.begin(), e.value.end());
-  return p;
-}
-
-bool decodeEntry(const Byte* p, size_t n, LogEntry& e) {
-  if (n < kEntryFixedLen) return false;
-  const uint8_t op = p[16];
-  if (op != static_cast<uint8_t>(OpCode::kPut) &&
-      op != static_cast<uint8_t>(OpCode::kGet) &&
-      op != static_cast<uint8_t>(OpCode::kDel) &&
-      op != static_cast<uint8_t>(OpCode::kConfig)) {  // M4: 配置条目（m4-prerequisites §5.1-14）
-    return false;
-  }
-  const size_t keyLen = getU32(p + 17);
-  const size_t valLen = getU32(p + 21);
-  if (n != kEntryFixedLen + keyLen + valLen) return false;
-
-  e.index = getU64(p);
-  e.term = getU64(p + 8);
-  e.op = static_cast<OpCode>(op);
-  e.clientId = getU64(p + 25);
-  e.requestId = getU64(p + 33);
-  e.key.assign(reinterpret_cast<const char*>(p + kEntryFixedLen), keyLen);
-  e.value.assign(
-      reinterpret_cast<const char*>(p + kEntryFixedLen + keyLen), valLen);
-  return true;
 }
 
 }  // namespace
@@ -178,10 +130,13 @@ bool FileLogStore::load(Term& term, int& votedFor, Index& lastIndex) {
       const uint32_t len = getU32(hdr + 4);
       if (len == kMetaPayloadLen) {
         Bytes payload(len);
+        Term metaTerm = kNoTerm;
+        int metaVotedFor = -1;
         if (readSome(mfd, payload.data(), len) == len &&
-            crc32(payload.data(), len) == crc) {
-          term_ = getU64(payload.data());
-          votedFor_ = static_cast<int>(getU32(payload.data() + 8));
+            crc32(payload.data(), len) == crc &&
+            decodeMeta(payload.data(), len, metaTerm, metaVotedFor)) {
+          term_ = metaTerm;
+          votedFor_ = metaVotedFor;
         }
       }
     }
@@ -246,10 +201,7 @@ bool FileLogStore::load(Term& term, int& votedFor, Index& lastIndex) {
 
 bool FileLogStore::persistMeta(Term term, int votedFor) {
   std::lock_guard<std::recursive_mutex> lock(mu_);
-  Bytes payload;
-  payload.reserve(kMetaPayloadLen);
-  putU64(payload, term);
-  putU32(payload, static_cast<uint32_t>(votedFor));
+  const Bytes payload = encodeMeta(term, votedFor);
 
   Bytes frame;
   frame.reserve(kFrameHeaderLen + payload.size());
