@@ -87,9 +87,11 @@ class LsmLogStore : public LogStore {
   uint64_t walTailTruncatedBytes() const;
 
  private:
-  // 调用方必须持 mu_。
+  // 调用方必须持 mu_（**不得**在持锁时调用公共访问器：它们是 non-recursive mutex）。
+  Index firstIndexLocked() const { return lastIncluded_ + 1; }
   bool appendNoSyncLocked(const std::vector<LogEntry>& entries);
   bool truncateLocked(Index fromIndex, bool flush);
+  bool deleteRangeLocked(Index from, Index to, bool sync);
   Term termAtLocked(Index index) const;
 
   // 让头文件不必包含 lsm 的 db.h（未配置 lsm 时也能编译）。

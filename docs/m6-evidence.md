@@ -275,3 +275,124 @@ meta.dat  raft.log
 2. **未做**：`tests/raft_lsm_log_test.cpp`（M6.2）。
 3. **未验证**：lsm 引擎在真实 raft 集群下的任何行为（M6.5/M6.6/M6.7）。
 4. **未验证**：`raft-lsm` 目录的空间/恢复代价（M6.7 的 O2/O3/D3/D4）。
+
+---
+
+## M6.2 LsmLogStore 语义单测（**不接 Raft**）
+
+### 交付
+
+| 文件 | 改动 |
+|---|---|
+| `src/raft/lsm_log_store.cpp` | M6.1 骨架 → **完整语义实现**（load/persistMeta/append/appendNoSync/sync/truncateSuffix[NoSync]/slice/访问器/setBoundary/compact/诊断） |
+| `src/raft/lsm_log_store.h` | 增 `firstIndexLocked()`（持锁内部用，避免 non-recursive mutex 自死锁）与 `deleteRangeLocked()` |
+| `tests/raft_lsm_log_test.cpp` | **新增 20 条用例**（未配置 lsm 的构建下退化为 1 条真断言的否定用例，不是 SKIP） |
+| `CMakeLists.txt` | `tests/raft_lsm_log_test.cpp` 入 `raftkv_raft_tests` |
+
+### 实现要点（与设计草案的差异都在下面的偏差登记里）
+
+* **append 的三阶段**：① 规划（不改内存、不碰 DB；失败 ⇒ 原样返回，**不产生半应用状态**）；
+  ② 写（冲突的 `Delete` 与后续 `Put` 在**同一个** WriteBatch 里 ⇒ 一次原子提交）；
+  ③ 提交内存态（只在 `DB::Write` 返回 kOk 之后）。
+* **分块**：`WriteBatch` 上限（`count ≤ 1<<20`、`ByteSize ≤ 64 MiB`，`write_batch.h` L31-32）⇒ 每批 ≤ 4096 op / 8 MiB。
+* **不绕过 R1**：`sync()` 不持本类 `mu_`，但 lsm 内部 `DB::Sync()` 仍持 `commit_mu_` 做 fsync（设计 §6 R1）——
+  M6 不改 lsm，也不为绕过它改设计。
+* **失败即毒化**：任一 `DB::Write`/`DB::Sync` 非 ok ⇒ `poisoned_ = true`，后续变更一律 `false`。
+
+### 判据与原始输出
+
+```bash
+$ cmake --build build -j8            # 日志 /tmp/m62-build3.log
+[100%] Built target raftkv_raft_tests
+$ grep -c 'warning:' /tmp/m62-build3.log
+0
+
+$ ./build/bin/raftkv_raft_tests --gtest_filter='LsmLogStore.*'
+[ RUN/OK] LsmLogStore.KeyEncodingIsBytewiseIndexOrdered
+[ RUN/OK] LsmLogStore.MetaKeyIsOutsideLogRange
+[ RUN/OK] LsmLogStore.RestartRestoresMetaAndLog
+[ RUN/OK] LsmLogStore.AppendIsDurableAndVisible
+[ RUN/OK] LsmLogStore.AppendNoSyncIsVisibleButSurvivesSync
+[ RUN/OK] LsmLogStore.IdempotentAppendSameIndexSameTerm
+[ RUN/OK] LsmLogStore.ConflictTruncateThenAppend
+[ RUN/OK] LsmLogStore.TruncateSuffixBoundaries
+[ RUN/OK] LsmLogStore.TruncateNoSyncThenSyncIsDurable
+[ RUN/OK] LsmLogStore.TruncateNoSyncIntoKillDashNineKeepsDeletionInPageCache
+[ RUN/OK] LsmLogStore.SliceClampsAndHonoursLimits
+[ RUN/OK] LsmLogStore.CompactDropsPrefixAndSurvivesRestart
+[ RUN/OK] LsmLogStore.PrefixGoneWithoutSnapshotRefusesLoad
+[ RUN/OK] LsmLogStore.LoadSkipsEntriesBelowBoundary
+[ RUN/OK] LsmLogStore.EmptyLogWithBoundary
+[ RUN/OK] LsmLogStore.MetaPersistIsAtomicAndDurable
+[ RUN/OK] LsmLogStore.SecondProcessOnSameDirIsRejectedByLock
+[ RUN/OK] LsmLogStore.LoadRefusesGapInTheMiddle
+[ RUN/OK] LsmLogStore.TornWalTailIsTruncatedByOpenAndCounted
+[ RUN/OK] LsmLogStore.ValueBytesMatchFileLogStoreOnDisk
+[==========] 20 tests from 1 test suite ran. (933 ms total)
+[  PASSED  ] 20 tests.
+
+$ ./build/bin/raftkv_raft_tests --gtest_filter='FileLogStore.*:MemoryLogStore.*'
+[==========] 2 tests from 1 test suite ran. (55 ms total)
+[  PASSED  ] 2 tests.
+
+$ ./build/bin/raftkv_raft_tests          # 全量
+[==========] 114 tests from 16 test suites ran. (43984 ms total)
+[  PASSED  ] 114 tests.
+
+$ git diff --stat -- tests/
+<空>   # ⇒ FileLogStore/MemoryLogStore 的既有用例一行未改（D15 同口径）
+
+$ cmake --build build-nolsm --target raftkv_raft_tests -j8   # 未配置 lsm 的构建
+$ ./build-nolsm/bin/raftkv_raft_tests --gtest_filter='LsmLogStore.*'
+[ RUN/OK ] LsmLogStore.WithoutLsmSupportConstructionFailsLoudly
+[  PASSED  ] 1 test.
+```
+
+**失败-修复留档（不得省略）**：首次运行时
+`LsmLogStore.TruncateNoSyncIntoKillDashNineKeepsDeletionInPageCache` 失败——
+子进程退出码 3，即 `truncateSuffixNoSync(4)` 返回 false。根因：新开的 `LsmLogStore` 内存尾还是
+`lastIndex_=0`（内存态来自 `load()`），`4 > lastIndex_+1` 触发 E3 越界。修复：子进程先
+`load()`（与 `RaftNode` 启动顺序一致）再截断。修复后 20/20。
+
+### 逐条用例 ↔ 设计论证映射
+
+| 用例 | 设计出处 | 判据 |
+|---|---|---|
+| `KeyEncodingIsBytewiseIndexOrdered` | §2.1 | 9B 定宽大端 key 的字节序 == 索引序；decode 往返 |
+| `MetaKeyIsOutsideLogRange` | §2.1 | `0x02"meta"` 严格大于所有日志 key；`isLogKey` 拒绝它 |
+| `RestartRestoresMetaAndLog` | §2.4.1 / `FileLogStore.RestartRestoresMetaAndLog` | 同 8 条断言 |
+| `AppendIsDurableAndVisible` | §2.4.3 / L28-33 | 返回即 durable 且立刻可见 |
+| `AppendNoSyncIsVisibleButSurvivesSync` | §2.4.4 / L31-33 | 可见但不 fsync；`sync()` 后重启仍在 |
+| `IdempotentAppendSameIndexSameTerm` | §2.4.4 / L320-322 | 重复批不报错、不重复 |
+| `ConflictTruncateThenAppend` | §2.4.4/E5 | 同 index 异 term ⇒ 覆盖；**重启后是新值**；`truncated_entries == 2` |
+| `TruncateSuffixBoundaries` | §2.4.6 E1-E4 | `kNoIndex`⇒true；`>lastIndex+1`⇒false；`<=lastIncluded`⇒false；`==lastIndex+1`⇒true |
+| `TruncateNoSyncThenSyncIsDurable` | §2.4.6 E7 | 同批 `sync()` 覆盖截断 |
+| `TruncateNoSyncIntoKillDashNineKeepsDeletionInPageCache` | §2.4.6 崩溃窗口（**改口径**，见 M6.2-D2） | kill -9 后截断仍可见（页缓存存活） |
+| `SliceClampsAndHonoursLimits` | §2.4.7 / L399-404 | clamp；`maxEntries`；`maxBytes` 至少 1 条；越界/0 条 |
+| `CompactDropsPrefixAndSurvivesRestart` | §2.4.9 + §2.4.1 R2 | tombstone 让前缀在用户视图消失；重启 + `setBoundary` 后可读 |
+| `PrefixGoneWithoutSnapshotRefusesLoad` | §2.4.1 R4 / L223-228 | 无快照 ⇒ 拒绝启动 |
+| `LoadSkipsEntriesBelowBoundary` | §2.4.1 R3 / L219-222 | 边界之下残留被跳过，首条 == first |
+| `EmptyLogWithBoundary` | §2.4.1 R5 | 空日志 + 边界 ⇒ `lastIndex==I`、`lastTerm==T`、`firstIndex==I+1` |
+| `MetaPersistIsAtomicAndDurable` | §2.4.2 | 重启后 term/votedFor 一致（含 `-1` 的位模式） |
+| `SecondProcessOnSameDirIsRejectedByLock` | D10 / §7 W7（**fork 双进程**，见 M6.0-D4） | 第二个**进程**的 Open 被 LOCK 拒绝 |
+| `LoadRefusesGapInTheMiddle` | D5 | 直连 lsm 删中间 key 造空洞 ⇒ `load()` false |
+| `TornWalTailIsTruncatedByOpenAndCounted` | §3.3 对齐点 1 / O8-D8 | 尾部残骸由 `DB::Open` 截断，`walTailTruncatedBytes() > 0`，前缀完好 |
+| `ValueBytesMatchFileLogStoreOnDisk` | §2.2 / M6.0-D3 | `raft.log` 的 payload == `encodeEntry()` == lsm 的 value，**逐字节** |
+
+### 偏差登记（M6.2）
+
+| ID | 设计写的 | 落地 | 裁决 |
+|---|---|---|---|
+| **M6.2-D1** | §2.4.9 的 `setBoundary` 草案：先更新 `lastIncluded_`，再用 `firstIndex()+drop <= lastIncludedIndex` 丢弃 `terms_` 前缀 | 该写法会**漏掉正好等于新边界的条目**（`firstIndex()` 已是新值 ⇒ 循环首轮即不成立） | 按 `FileLogStore::setBoundary`（L437-441）的绝对索引语义实现：先取 `oldFirst = lastIncluded_+1`，再按 `oldFirst+drop <= newBoundary` 丢弃。`EmptyLogWithBoundary`/`LoadSkipsEntriesBelowBoundary` 钉住该行为 |
+| **M6.2-D2** | §4-M6.2 的 `TruncateThenCrashResurrectSuffix`：只做 `truncateSuffixNoSync` 不 `sync()` ⇒「后缀复活」（文档化的反面） | 实测 **kill -9 后截断仍然可见**（页缓存存活）——与设计 §3.1 矩阵「appendNoSync 在本 VM 实测必存活（page cache）」是同一现象。「复活」只可能发生在掉电 | 用例改名 `TruncateNoSyncIntoKillDashNineKeepsDeletionInPageCache` 并断言**实测行为**（fork 子进程截断后 `_exit`，不跑析构）；「掉电语义未覆盖」写入未验证清单 |
+| **M6.2-D3** | §2.4.4 的 `appendNoSync` 草案：边遍历边改内存（与 FileLogStore 同形） | 实现改为三阶段（规划/写/提交内存），且冲突的 Delete+Put 同批原子 | 更强：校验失败不产生半应用状态；且「截断后追加」是一次原子提交（设计 §2.4.4 自己也把这条列为「更强的保证」） |
+| **M6.2-D4** | §2.4.4 只提「必须分批（≤ kMaxCount / 64MiB）」 | 落地上界为 4096 op / 8 MiB 每批 | 留出余量；分块跨越失败时毒化（fail-stop），不再假装成功 |
+| **M6.2-D5** | 资源纪律：重活与 lsm 侧串行 | M6.2 期间 lsm 侧在同一 VM 上跑 `cmake --build`/`lsm_tests`（正在做 R1/SyncIsolation 修复），与本步的**增量构建**和 44s 的 gtest 全量有重叠 | 如实登记；**未**在重叠窗口跑任何计时敏感基准（基准在 M6.7，届时按纪律重探空闲）；结论不受影响（本步全是功能断言，不含计时） |
+
+### 未做 / 未验证（M6.2 时点）
+
+1. **未做**：`tests/raft_restart_test.cpp` 参数化（M6.3）、Disk fixture 参数化（M6.4）、e2e 脚本双引擎（M6.5）、故障注入（M6.6）、A/B（M6.7）—— 本步**不接 Raft**。
+2. **未验证（覆盖缺口）**：`TruncateNoSync` 的**掉电**（页缓存丢失）语义 —— 测试装置无法构造（需要假文件系统/掉电模型）。设计 §4-M6.3 的 `TruncatesTornTail` 在 lsm 侧同样没有直接注入点；lsm 侧的等价证据目前是 `TornWalTailIsTruncatedByOpenAndCounted`（尾部残骸）+ M6.6 的真实 `kill -9`。
+3. **未验证**：LsmLogStore 在并发（多线程 append/sync/slice 交错）下的正确性 —— 本步单测是单线程的；TSan 覆盖在 M6.8/H12（设计 §5.2）与 M6.5/M6.6 的端到端。
+4. **未验证**：`slice()` 的解码失败路径（`slice_decode_errors`）与毒化路径 —— 未构造注入点（需要介质损坏）。
+5. **未验证**：性能（每次 `slice()` 建迭代器的开销 R2、`truncateSuffix` 的写放大 R3）—— M6.7。

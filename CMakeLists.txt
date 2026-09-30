@@ -107,6 +107,7 @@ if(GTEST_INCLUDE_DIR AND GTEST_LIBRARY)
     tests/raft_membership_test.cpp
     tests/raft_perf_test.cpp
     tests/raft_reactor_test.cpp
+    tests/raft_lsm_log_test.cpp
   )
   target_include_directories(raftkv_raft_tests PRIVATE
     ${GTEST_INCLUDE_DIR}
