@@ -15,6 +15,7 @@
 #include <unistd.h>
 
 #include "kv/kv_state_machine.h"
+#include "raft/lsm_log_store.h"
 #include "raft/snapshot_store.h"
 #include "raft_test_harness.h"
 
@@ -54,6 +55,26 @@ std::string tempDir() {
             std::to_string(counter++));
   std::filesystem::create_directories(p);
   return p.string();
+}
+
+// ---- M6.4（设计 §4-M6.4 / D15）--------------------------------------------
+// 只参数化**真实临时目录**的 Disk 系列；确定性内存集群（makeCluster/makeMembershipCluster）
+// 一行不动。两个引擎跑**同一个 body**（不是两份拷贝）⇒ 断言文本逐字一致。
+enum class DiskEngine { kFile, kLsm };
+
+std::unique_ptr<LogStore> makeDiskLog(DiskEngine eng, const std::string& dir) {
+  if (eng == DiskEngine::kLsm) return std::make_unique<LsmLogStore>(dir);
+  return std::make_unique<FileLogStore>(dir);
+}
+
+// 撕裂尾的注入路径：file 引擎 = <dir>/raft/raft.log；lsm 引擎 = <dir>/raft-lsm 下的活动 WAL。
+std::string tornTailPath(DiskEngine eng, const std::string& dir) {
+  if (eng == DiskEngine::kFile) return dir + "/raft/raft.log";
+  for (const auto& e : std::filesystem::directory_iterator(dir + "/raft-lsm")) {
+    const std::string p = e.path().string();
+    if (p.size() >= 4 && p.compare(p.size() - 4, 4, ".log") == 0) return p;
+  }
+  return {};
 }
 
 // Elects a leader and writes `n` committed entries through it.
@@ -324,13 +345,14 @@ TEST(RaftSnapshot, DedupTableSurvivesSnapshot) {
 
 // ---------------------------------------------------------------- B-group ---
 
-TEST(RaftSnapshotDisk, RestartLoadsSnapshotThenReplaysTail) {
+namespace {
+void RestartLoadsSnapshotThenReplaysTailBody(DiskEngine eng) {
   const std::string dir = tempDir();
   {
-    FileLogStore log(dir);
+    auto log = makeDiskLog(eng, dir);
     std::vector<LogEntry> head;
     for (Index i = 1; i <= 5; ++i) head.push_back(entry(i, 1, "a", "1"));
-    ASSERT_TRUE(log.append(head));
+    ASSERT_TRUE(log->append(head));
 
     FileSnapshotStore snap(dir);
     SnapshotData d;
@@ -345,20 +367,29 @@ TEST(RaftSnapshotDisk, RestartLoadsSnapshotThenReplaysTail) {
     ASSERT_TRUE(snap.load(d));
     EXPECT_EQ(d.lastIncludedIndex, 5);
 
-    FileLogStore log(dir);
-    log.setBoundary(d.lastIncludedIndex, d.lastIncludedTerm);
+    auto log = makeDiskLog(eng, dir);
+    log->setBoundary(d.lastIncludedIndex, d.lastIncludedTerm);
     std::vector<LogEntry> tail;
     for (Index i = 6; i <= 8; ++i) tail.push_back(entry(i, 2, "b", "2"));
-    ASSERT_TRUE(log.append(tail));
+    ASSERT_TRUE(log->append(tail));
 
     Term term = 0;
     int votedFor = -1;
     Index lastIndex = 0;
-    ASSERT_TRUE(log.load(term, votedFor, lastIndex));
+    ASSERT_TRUE(log->load(term, votedFor, lastIndex));
     EXPECT_EQ(lastIndex, 8);
-    EXPECT_EQ(log.firstIndex(), 6);
+    EXPECT_EQ(log->firstIndex(), 6);
   }
   std::filesystem::remove_all(dir);
+}
+}  // namespace
+
+TEST(RaftSnapshotDisk, RestartLoadsSnapshotThenReplaysTail) {
+  RestartLoadsSnapshotThenReplaysTailBody(DiskEngine::kFile);
+}
+
+TEST(RaftSnapshotDiskLsm, RestartLoadsSnapshotThenReplaysTail) {
+  RestartLoadsSnapshotThenReplaysTailBody(DiskEngine::kLsm);
 }
 
 TEST(RaftSnapshotDisk, TornSnapshotDiscarded) {
@@ -548,42 +579,55 @@ TEST(RaftSnapshotResume, ContinuesAfterStoreRestart) {
   }
   std::filesystem::remove_all(dir);
 }
-TEST(RaftSnapshotDisk, TornTailAfterCompact) {
+namespace {
+void TornTailAfterCompactBody(DiskEngine eng) {
   const std::string dir = tempDir();
   {
-    FileLogStore log(dir);
+    auto log = makeDiskLog(eng, dir);
     std::vector<LogEntry> entries;
     for (Index i = 1; i <= 5; ++i) entries.push_back(entry(i, 1, "a", "1"));
-    ASSERT_TRUE(log.append(entries));
-    ASSERT_TRUE(log.compact(3, 1));  // drop prefix <= 3
-    EXPECT_EQ(log.firstIndex(), 4);
+    ASSERT_TRUE(log->append(entries));
+    ASSERT_TRUE(log->compact(3, 1));  // drop prefix <= 3
+    EXPECT_EQ(log->firstIndex(), 4);
   }
   {
     // Append garbage (torn tail) after compaction.
-    std::ofstream out(dir + "/raft/raft.log", std::ios::binary | std::ios::app);
+    const std::string path = tornTailPath(eng, dir);
+    ASSERT_FALSE(path.empty());
+    std::ofstream out(path, std::ios::binary | std::ios::app);
     const char junk[] = "torn-tail";
     out.write(junk, sizeof(junk) - 1);
   }
   {
-    FileLogStore log(dir);
-    log.setBoundary(3, 1);
+    auto log = makeDiskLog(eng, dir);
+    log->setBoundary(3, 1);
     Term term = 0;
     int votedFor = -1;
     Index lastIndex = 0;
-    ASSERT_TRUE(log.load(term, votedFor, lastIndex));
+    ASSERT_TRUE(log->load(term, votedFor, lastIndex));
     EXPECT_EQ(lastIndex, 5);
-    EXPECT_EQ(log.firstIndex(), 4);
+    EXPECT_EQ(log->firstIndex(), 4);
   }
   std::filesystem::remove_all(dir);
 }
+}  // namespace
 
-TEST(RaftSnapshotDisk, SnapshotAndLogCombinedRecovery) {
+TEST(RaftSnapshotDisk, TornTailAfterCompact) {
+  TornTailAfterCompactBody(DiskEngine::kFile);
+}
+
+TEST(RaftSnapshotDiskLsm, TornTailAfterCompact) {
+  TornTailAfterCompactBody(DiskEngine::kLsm);
+}
+
+namespace {
+void SnapshotAndLogCombinedRecoveryBody(DiskEngine eng) {
   const std::string dir = tempDir();
   {
-    FileLogStore log(dir);
+    auto log = makeDiskLog(eng, dir);
     std::vector<LogEntry> head;
     for (Index i = 1; i <= 6; ++i) head.push_back(entry(i, 1, "a", "1"));
-    ASSERT_TRUE(log.append(head));
+    ASSERT_TRUE(log->append(head));
 
     FileSnapshotStore snap(dir);
     SnapshotData d;
@@ -591,21 +635,21 @@ TEST(RaftSnapshotDisk, SnapshotAndLogCombinedRecovery) {
     d.lastIncludedTerm = 1;
     d.payload = Bytes{'k', 'v'};
     ASSERT_TRUE(snap.save(d));
-    ASSERT_TRUE(log.compact(4, 1));
+    ASSERT_TRUE(log->compact(4, 1));
   }
   {
     // Restart sequence: boundary first (from the snapshot), then load, then append.
-    FileLogStore log(dir);
-    log.setBoundary(4, 1);
+    auto log = makeDiskLog(eng, dir);
+    log->setBoundary(4, 1);
     Term t = 0;
     int v = -1;
     Index last = 0;
-    ASSERT_TRUE(log.load(t, v, last));
+    ASSERT_TRUE(log->load(t, v, last));
     ASSERT_EQ(last, 6);
 
     std::vector<LogEntry> tail;
     for (Index i = 7; i <= 9; ++i) tail.push_back(entry(i, 2, "b", "2"));
-    ASSERT_TRUE(log.append(tail));
+    ASSERT_TRUE(log->append(tail));
   }
   {
     FileSnapshotStore snap(dir);
@@ -613,16 +657,25 @@ TEST(RaftSnapshotDisk, SnapshotAndLogCombinedRecovery) {
     ASSERT_TRUE(snap.load(d));
     EXPECT_EQ(d.lastIncludedIndex, 4);
 
-    FileLogStore log(dir);
-    log.setBoundary(d.lastIncludedIndex, d.lastIncludedTerm);
+    auto log = makeDiskLog(eng, dir);
+    log->setBoundary(d.lastIncludedIndex, d.lastIncludedTerm);
     Term term = 0;
     int votedFor = -1;
     Index lastIndex = 0;
-    ASSERT_TRUE(log.load(term, votedFor, lastIndex));
+    ASSERT_TRUE(log->load(term, votedFor, lastIndex));
     EXPECT_EQ(lastIndex, 9);
-    EXPECT_EQ(log.firstIndex(), 5);
+    EXPECT_EQ(log->firstIndex(), 5);
   }
   std::filesystem::remove_all(dir);
+}
+}  // namespace
+
+TEST(RaftSnapshotDisk, SnapshotAndLogCombinedRecovery) {
+  SnapshotAndLogCombinedRecoveryBody(DiskEngine::kFile);
+}
+
+TEST(RaftSnapshotDiskLsm, SnapshotAndLogCombinedRecovery) {
+  SnapshotAndLogCombinedRecoveryBody(DiskEngine::kLsm);
 }
 
 // ------------------------------------------- review round (M3 + group commit) ---
@@ -855,7 +908,7 @@ TEST(RaftSnapshotStore, ReceiveChunkIsIdempotentForRetransmits) {
 namespace {
 
 struct DiskNode {
-  std::unique_ptr<FileLogStore> log;
+  std::unique_ptr<LogStore> log;  // M6.4: 引擎由 makeDiskLog(eng, dir) 决定
   std::unique_ptr<KvStateMachine> sm;
   std::unique_ptr<FileSnapshotStore> snapshots;
   std::unique_ptr<RaftNode> node;
@@ -863,7 +916,8 @@ struct DiskNode {
 
 }  // namespace
 
-TEST(RaftSnapshotDisk, FileStoreClusterKeepsCommittingAfterCompaction) {
+namespace {
+void FileStoreClusterKeepsCommittingAfterCompactionBody(DiskEngine eng) {
   const std::string root = tempDir();
   auto clock = std::make_shared<FakeClock>();
   auto transport = std::make_shared<MemoryTransport>();
@@ -871,7 +925,7 @@ TEST(RaftSnapshotDisk, FileStoreClusterKeepsCommittingAfterCompaction) {
   for (int id = 1; id <= 3; ++id) {
     DiskNode& n = nodes[static_cast<size_t>(id - 1)];
     const std::string dir = root + "/n" + std::to_string(id);
-    n.log = std::make_unique<FileLogStore>(dir);
+    n.log = makeDiskLog(eng, dir);
     n.sm = std::make_unique<KvStateMachine>();
     n.snapshots = std::make_unique<FileSnapshotStore>(dir);
     RaftConfig cfg;
@@ -921,6 +975,17 @@ TEST(RaftSnapshotDisk, FileStoreClusterKeepsCommittingAfterCompaction) {
   }
   EXPECT_GT(leader->lastIncludedIndex(), kNoIndex);
   std::filesystem::remove_all(root);
+}
+}  // namespace
+
+TEST(RaftSnapshotDisk, FileStoreClusterKeepsCommittingAfterCompaction) {
+  FileStoreClusterKeepsCommittingAfterCompactionBody(DiskEngine::kFile);
+}
+
+// 设计 §4-M6.4 指出该用例名里带 FileStore、语义在 lsm 侧要重新表述 —— 这里保留原用例名
+// （file 引擎）并新增 lsm 孪生；两者的 body 是同一份（只有引擎不同）。
+TEST(RaftSnapshotDisk, LsmStoreClusterKeepsCommittingAfterCompaction) {
+  FileStoreClusterKeepsCommittingAfterCompactionBody(DiskEngine::kLsm);
 }
 
 TEST(RaftSnapshotDisk, ConcurrentSaveAndInstallKeepNewestSnapshot) {  // B5/B14: the two writers must be serialised inside the store; the newest

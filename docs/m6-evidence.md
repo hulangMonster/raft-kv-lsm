@@ -452,3 +452,78 @@ $ grep -c 'RestartRestoresMetaAndLogBody<LsmLogStore>'  tests/raft_restart_test.
 1. **未做**：Disk fixture 参数化（M6.4）、e2e（M6.5）、故障注入（M6.6）、A/B（M6.7）。
 2. **未验证**：`RaftSnapshotDisk.*` / `RaftMembershipDisk.*` 在 lsm 引擎下的行为（M6.4）。
 3. **未验证**：`raft_restart_test` 之外，`LsmLogStore` 与 `RaftNode` 的**真实接线**（本步仍是 store 级用例；M6.4/M6.5 才接集群）。
+
+---
+
+## M6.4 `RaftSnapshotDisk.*` / `RaftMembershipDisk.*` fixture 参数化
+
+### 交付
+
+| 文件 | 改动 |
+|---|---|
+| `tests/raft_snapshot_test.cpp` | 新增 `enum class DiskEngine{kFile,kLsm}` + `makeDiskLog(eng,dir)` + `tornTailPath(eng,dir)`；`DiskNode::log` 改为 `std::unique_ptr<LogStore>`；4 个场景抽成共享 body（3 个 store 级 + 1 个 3 节点集群），各生成 file/lsm 两条用例 |
+| `tests/raft_membership_test.cpp` | 同上（`DiskNode::log` → `LogStore`；`buildDiskCluster(..., DiskEngine eng = kFile)`）；B1/B2/B3 抽成共享 body + lsm 孪生 |
+
+参数化机制：**运行时选引擎**（`makeDiskLog`）而不是 typed-test —— 既有用例名一字不改，两个引擎跑
+**同一个函数体**（断言文本逐字一致，不是两份拷贝）。确定性内存集群（`makeCluster` /
+`makeMembershipCluster`）**一行未动**（D15）。
+
+### 判据与原始输出
+
+```bash
+$ touch tests/raft_snapshot_test.cpp tests/raft_membership_test.cpp && cmake --build build -j8
+$ grep -c 'warning:' /tmp/m64-build3.log
+0
+
+$ ./build/bin/raftkv_raft_tests --gtest_filter='*Disk*' --gtest_list_tests
+RaftSnapshotDisk.  RestartLoadsSnapshotThenReplaysTail / TornSnapshotDiscarded / TornTailAfterCompact /
+                   SnapshotAndLogCombinedRecovery / FileStoreClusterKeepsCommittingAfterCompaction /
+                   LsmStoreClusterKeepsCommittingAfterCompaction / ConcurrentSaveAndInstallKeepNewestSnapshot
+RaftSnapshotDiskLsm. RestartLoadsSnapshotThenReplaysTail / TornTailAfterCompact / SnapshotAndLogCombinedRecovery
+RaftMembershipDisk.  B1_ConfigPersistsAcrossRestart / B2_ConfigCompactedThenRecoveredFromSnapshot /
+                     B3_CrashDuringConfigChangeKeepsConsistentTopology / B4_Rks1V1SnapshotStillLoads
+RaftMembershipDiskLsm. B1_ConfigPersistsAcrossRestart / B2_ConfigCompactedThenRecoveredFromSnapshot /
+                       B3_CrashDuringConfigChangeKeepsConsistentTopology
+LsmLogStore. ValueBytesMatchFileLogStoreOnDisk      # 名字里带 Disk，被 *Disk* 命中（无害）
+
+$ ./build/bin/raftkv_raft_tests --gtest_filter='*Disk*'
+[==========] 18 tests from 5 test suites ran. (8237 ms total)
+[  PASSED  ] 18 tests.
+
+$ ./build/bin/raftkv_raft_tests          # 全量
+[==========] 121 tests from 18 test suites ran. (48600 ms total)
+[  PASSED  ] 121 tests.
+```
+
+**失败-修复留档**：M6.4 首轮构建出现 1 条 `-Wall` warning ——
+`tests/raft_membership_test.cpp:293: warning: 'tornTailPath' defined but not used`（membership 侧不注入撕裂尾）。
+删除该文件里多余的 helper（`/tmp/fix_m64_warning.py`），重建后 `grep -c 'warning:'` = 0。**没有**用
+`(void)`/`[[maybe_unused]]` 之类把 warning 藏起来。
+
+### 逐条判据状态（设计 §4-M6.4）
+
+| 判据 | 状态 | 证据 |
+|---|---|---|
+| Disk 系列参数化后两个引擎都绿 | ✅ 通过 | `*Disk*` 18/18 PASSED |
+| 既有 `RaftSnapshotDisk.*` / `RaftMembershipDisk.*` 用例名保留、断言不变 | ✅ 通过 | file 侧 11 条名字与断言文本原样（body 抽出来但文本未改） |
+| 全量不退化（M2-M5 门禁） | ✅ 通过 | 121/121（114 + 7 条 lsm 孪生） |
+| 0 warning | ✅ 通过（修过一条，见上） | `grep -c 'warning:'` = 0 |
+| 设计预期的「8 用例 × 2 = 16 条」 | ⚠️ 口径偏差 | 见 M6.4-D1 |
+| `TornTailAfterCompact` 在 lsm 侧「可能不适用」 | ⚠️ 被证伪 | 见 M6.4-D2 |
+
+### 偏差登记（M6.4）
+
+| ID | 设计写的 | 落地 | 裁决 |
+|---|---|---|---|
+| **M6.4-D1** | §4-M6.4：「8 个 Disk 用例 × 2 引擎 = 16 条全绿」 | 实测 Disk 系列共 10 个用例名，其中**只有 7 个真的用 LogStore**（`TornSnapshotDiscarded`、`ConcurrentSaveAndInstallKeepNewestSnapshot`、`B4_Rks1V1SnapshotStillLoads` 只用 `FileSnapshotStore`，与「日志引擎」无关）⇒ 7×2 = **14 条引擎参数化**用例；`*Disk*` 过滤命中 18 条（含名字里带 Disk 的 `LsmLogStore.ValueBytesMatchFileLogStoreOnDisk`） | 以「真的涉及 LogStore」为准参数化；快照存储/codec 类用例不强行参数化（参数化它们是假覆盖）。**登记为口径偏差** |
+| **M6.4-D2** | §4-M6.4：`RaftSnapshotDisk.TornTailAfterCompact`（L551)「前者可能**不适用**，如实标注」 | **不适用这一判断被实测证伪**：同一 body + 引擎相关的注入路径（`tornTailPath(eng, dir)`）在 lsm 侧直接通过（compact 后写 tombstone，尾部垃圾由 `DB::Open` 截断） | 提供真正的孪生，不标注「不适用」 |
+| **M6.4-D3** | §4-M6.4：`FileStoreClusterKeepsCommittingAfterCompaction`（L866）「名字里就带 FileStore，语义在 lsm 侧需要重新表述」 | 保留原用例名（file），新增同 suite 的 `LsmStoreClusterKeepsCommittingAfterCompaction`（lsm），两者共用同一 body | 不改既有名字（避免破坏历史过滤/引用），新增孪生名更明确 |
+| **M6.4-D4** | 设计未规定参数化形式 | 采用**运行时** `DiskEngine` + `makeDiskLog()`，而不是 typed-test fixture | 既有用例名保持不变、diff 最小；两个引擎仍跑同一份断言文本 |
+| **M6.4-D5** | 资源纪律 | 本步构建（两个测试 TU + link）与 48.6s 全量期间，lsm 侧在跑 `sync_isolation_probe` 相关构建 | 如实登记；无计时断言 |
+
+### 未做 / 未验证（M6.4 时点）
+
+1. **未做**：e2e 脚本双引擎（M6.5）、故障注入 + `LOG_BOUND` 口径（M6.6）、A/B（M6.7）。
+2. **未验证**：真实多进程集群（`main_raft_node` + 脚本）在 lsm 引擎下能否跑通 —— 本步仍是同进程的 MemoryTransport 集群。
+3. **未验证**：`RaftMembershipDiskLsm.B2` 的块级细节（配置随快照持久化在 lsm 侧同样成立，已由断言覆盖；但**压缩后物理空间回收**未观测 → M6.7 的 D3/R4）。
+4. **未验证**：并发（多线程 save/install 与 lsm 引擎的组合）—— `ConcurrentSaveAndInstallKeepNewestSnapshot` 只用快照存储，未参数化。

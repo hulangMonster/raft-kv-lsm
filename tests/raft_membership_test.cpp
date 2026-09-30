@@ -25,6 +25,7 @@
 #include "kv/kv_state_machine.h"
 #include "raft/cluster_config.h"
 #include "raft/message.h"
+#include "raft/lsm_log_store.h"
 #include "raft/snapshot_store.h"
 #include "raft_test_harness.h"
 
@@ -277,10 +278,22 @@ class CommitNoticeSuppressor : public MemoryTransport {
   std::vector<int> ids_;
 };
 
+
+// ---- M6.4（设计 §4-M6.4 / D15）--------------------------------------------
+// 只参数化**真实临时目录**的 Disk 系列；确定性内存集群（makeCluster/makeMembershipCluster）
+// 一行不动。两个引擎跑**同一个 body**（不是两份拷贝）⇒ 断言文本逐字一致。
+enum class DiskEngine { kFile, kLsm };
+
+std::unique_ptr<LogStore> makeDiskLog(DiskEngine eng, const std::string& dir) {
+  if (eng == DiskEngine::kLsm) return std::make_unique<LsmLogStore>(dir);
+  return std::make_unique<FileLogStore>(dir);
+}
+
+
 // ---------------- B 组：真实磁盘集群 ----------------
 
 struct DiskNode {
-  std::unique_ptr<FileLogStore> log;
+  std::unique_ptr<LogStore> log;  // M6.4: 引擎由 buildDiskCluster(..., eng) 决定
   std::unique_ptr<KvStateMachine> sm;
   std::unique_ptr<FileSnapshotStore> snapshots;
   std::unique_ptr<RaftNode> node;
@@ -295,8 +308,11 @@ struct DiskCluster {
 };
 
 // fresh=true 时清空目录；fresh=false 时在原有数据上重建节点（模拟重启）
+// fresh=true 时清空目录；fresh=false 时在原有数据上重建节点（模拟重启）
+// M6.4：eng 决定日志引擎（file/lsm），其余一字不改。
 void buildDiskCluster(DiskCluster& c, int n, const std::string& root,
-                      size_t threshold, bool fresh) {
+                      size_t threshold, bool fresh,
+                      DiskEngine eng = DiskEngine::kFile) {
   if (fresh) std::filesystem::remove_all(root);
   std::filesystem::create_directories(root);
   c.clock = std::make_shared<FakeClock>();
@@ -308,7 +324,7 @@ void buildDiskCluster(DiskCluster& c, int n, const std::string& root,
   for (int id = 1; id <= n; ++id) {
     DiskNode& dn = c.nodes[static_cast<size_t>(id - 1)];
     const std::string dir = root + "/n" + std::to_string(id);
-    dn.log = std::make_unique<FileLogStore>(dir);
+    dn.log = makeDiskLog(eng, dir);
     dn.sm = std::make_unique<KvStateMachine>();
     dn.snapshots = std::make_unique<FileSnapshotStore>(dir);
     RaftConfig cfg;
@@ -1523,10 +1539,11 @@ TEST(RaftMembership, A29_RemovedPeerKeepsReceivingUntilItAcks) {
 
 // ================================ B 组 ================================
 
-TEST(RaftMembershipDisk, B1_ConfigPersistsAcrossRestart) {
+namespace {
+void B1_ConfigPersistsAcrossRestartBody(DiskEngine eng) {
   const std::string root = tempDir();
   DiskCluster c;
-  buildDiskCluster(c, 3, root, 1000000, /*fresh=*/true);
+  buildDiskCluster(c, 3, root, 1000000, /*fresh=*/true, eng);
   driveDiskTicks(c, 80, 10);
   const int lid = diskLeaderId(c);
   ASSERT_GT(lid, 0);
@@ -1541,18 +1558,28 @@ TEST(RaftMembershipDisk, B1_ConfigPersistsAcrossRestart) {
   ASSERT_GT(ver, static_cast<uint64_t>(0));
 
   // 重启：同一目录重建节点，配置必须从日志恢复
-  buildDiskCluster(c, 3, root, 1000000, /*fresh=*/false);
+  buildDiskCluster(c, 3, root, 1000000, /*fresh=*/false, eng);
   driveDiskTicks(c, 80, 10);
   RaftNode* repl = c.nodes[static_cast<size_t>(lid - 1)].node.get();
   EXPECT_EQ(repl->configVersion(), ver);
   EXPECT_FALSE(repl->clusterConfig().contains(removed));
   std::filesystem::remove_all(root);
 }
+}  // namespace
 
-TEST(RaftMembershipDisk, B2_ConfigCompactedThenRecoveredFromSnapshot) {
+TEST(RaftMembershipDisk, B1_ConfigPersistsAcrossRestart) {
+  B1_ConfigPersistsAcrossRestartBody(DiskEngine::kFile);
+}
+
+TEST(RaftMembershipDiskLsm, B1_ConfigPersistsAcrossRestart) {
+  B1_ConfigPersistsAcrossRestartBody(DiskEngine::kLsm);
+}
+
+namespace {
+void B2_ConfigCompactedThenRecoveredFromSnapshotBody(DiskEngine eng) {
   const std::string root = tempDir();
   DiskCluster c;
-  buildDiskCluster(c, 3, root, /*threshold=*/8, /*fresh=*/true);
+  buildDiskCluster(c, 3, root, /*threshold=*/8, /*fresh=*/true, eng);
   driveDiskTicks(c, 80, 10);
   const int lid = diskLeaderId(c);
   ASSERT_GT(lid, 0);
@@ -1577,18 +1604,28 @@ TEST(RaftMembershipDisk, B2_ConfigCompactedThenRecoveredFromSnapshot) {
   ASSERT_TRUE(ldn.snapshots->load(snap));
   ASSERT_FALSE(snap.config.empty());  // 配置必须随快照持久化
 
-  buildDiskCluster(c, 3, root, /*threshold=*/8, /*fresh=*/false);
+  buildDiskCluster(c, 3, root, /*threshold=*/8, /*fresh=*/false, eng);
   driveDiskTicks(c, 80, 10);
   RaftNode* repl = c.nodes[static_cast<size_t>(lid - 1)].node.get();
   EXPECT_EQ(repl->configVersion(), ver);
   EXPECT_FALSE(repl->clusterConfig().contains(removed));
   std::filesystem::remove_all(root);
 }
+}  // namespace
 
-TEST(RaftMembershipDisk, B3_CrashDuringConfigChangeKeepsConsistentTopology) {
+TEST(RaftMembershipDisk, B2_ConfigCompactedThenRecoveredFromSnapshot) {
+  B2_ConfigCompactedThenRecoveredFromSnapshotBody(DiskEngine::kFile);
+}
+
+TEST(RaftMembershipDiskLsm, B2_ConfigCompactedThenRecoveredFromSnapshot) {
+  B2_ConfigCompactedThenRecoveredFromSnapshotBody(DiskEngine::kLsm);
+}
+
+namespace {
+void B3_CrashDuringConfigChangeKeepsConsistentTopologyBody(DiskEngine eng) {
   const std::string root = tempDir();
   DiskCluster c;
-  buildDiskCluster(c, 3, root, 1000000, /*fresh=*/true);
+  buildDiskCluster(c, 3, root, 1000000, /*fresh=*/true, eng);
   driveDiskTicks(c, 80, 10);
   const int lid = diskLeaderId(c);
   ASSERT_GT(lid, 0);
@@ -1605,13 +1642,22 @@ TEST(RaftMembershipDisk, B3_CrashDuringConfigChangeKeepsConsistentTopology) {
   c.nodes.clear();                          // 模拟 kill -9（日志文件保留在磁盘上）
 
   // 重启：拓扑必须是自洽的（由日志决定），且集群能重新选主并提交
-  buildDiskCluster(c, 3, root, 1000000, /*fresh=*/false);
+  buildDiskCluster(c, 3, root, 1000000, /*fresh=*/false, eng);
   driveDiskTicks(c, 100, 10);
   RaftNode* repl = c.nodes[static_cast<size_t>(lid - 1)].node.get();
   const ClusterConfig cfg = repl->clusterConfig();
   EXPECT_EQ(cfg.votingCount() == 2u || cfg.votingCount() == 3u, true);
   EXPECT_EQ(cfg.contains(removed), cfg.votingCount() == 3u);
   std::filesystem::remove_all(root);
+}
+}  // namespace
+
+TEST(RaftMembershipDisk, B3_CrashDuringConfigChangeKeepsConsistentTopology) {
+  B3_CrashDuringConfigChangeKeepsConsistentTopologyBody(DiskEngine::kFile);
+}
+
+TEST(RaftMembershipDiskLsm, B3_CrashDuringConfigChangeKeepsConsistentTopology) {
+  B3_CrashDuringConfigChangeKeepsConsistentTopologyBody(DiskEngine::kLsm);
 }
 
 TEST(RaftMembershipDisk, B4_Rks1V1SnapshotStillLoads) {
