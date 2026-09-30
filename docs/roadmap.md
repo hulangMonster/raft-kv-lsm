@@ -115,6 +115,19 @@
   N=10 单机上 sync 出现过 leader 变更而 reactor 稳定。数据见 `m5-bench.md` §3.12
 - ⬜ 未做（非本里程碑目标）：分片锁 / 并发哈希、Node Exporter 风格指标端点、gRPC 接口层
 
+## M6 存储层适配：`LogStore` → lsm 引擎（**已交付**）
+
+- ✅ `LsmLogStore`（`src/raft/lsm_log_store.{h,cpp}`）+ 共享条目编码 `src/raft/log_entry_codec.h`；
+  与 `FileLogStore` 逐方法等价（`docs/m6-design.md` §2.4 + 20 条单测 + `raft_restart_test` / Disk 系列**双引擎参数化**）
+- ✅ `--log-engine=file|lsm`（默认 file；未编译进 lsm 时明确报错，绝不静默降级）；e2e / 故障脚本支持双引擎
+- ✅ `raft_snapshot_fault.sh` 的 `LOG_BOUND` 按引擎取口径（file = `raft/raft.log` ≤1 MiB；lsm = `raft-lsm/`
+  目录总字节 ≤ 4 MiB，**实测标定**）
+- ✅ 三臂 A/B（base/file/lsm 同轮交替 + 每格 `missing 0`）与负结果入档：`docs/m6-bench.md`
+  （**LSM 未必更快**：p=64 延迟 1.12×；100k 负载下日志空间 ≈50×）；偏差与裁决：`docs/m6-evidence.md`
+- ⬜ 未做（见 `m6-bench.md` §7）：P99/延迟直方图（设计 D12 未实现）、lsm 内部统计接线
+  （`GetLevelStats`/`GetAmplificationStats`/`GetFlushStats`）、ASan/TSan 在本轮的收口、
+  `raft_snapshot_fault.sh --log-engine lsm --repeat 50` 全量轮
+
 ## 贯穿性工程要求
 
 - 每个阶段先写"怎么验证"，再写实现

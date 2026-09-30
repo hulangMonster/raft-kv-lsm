@@ -1,7 +1,8 @@
 # raftkv —— Raft-based Distributed Key-Value Store
 
 > 里程碑：**M1 ✅ 单机 KV + WAL** · **M2 ✅ Raft 选主 + 日志复制** · **M3 ✅ 快照与日志压缩 + group commit** ·
-> **M4 ✅ 成员变更 + 客户端路由 / 线性一致读** · **M5 ✅ 性能优化与可观测性**
+> **M4 ✅ 成员变更 + 客户端路由 / 线性一致读** · **M5 ✅ 性能优化与可观测性** ·
+> **M6 ✅ 存储层适配：`LogStore` 的 lsm 引擎实现（`--log-engine=lsm`）**
 > （M1–M5 全部实现并发布；p=8/64 的同机比值吞吐曾未达标，已定位并修复 ——
 > 见 [性能与已知取舍](#性能与已知取舍) 与 [docs/m5-bench.md](docs/m5-bench.md) §3.11；
 > 路线图见 [docs/roadmap.md](docs/roadmap.md)）
@@ -9,7 +10,8 @@
 一个从零实现、面向简历与生产场景的分布式 KV：
 M1 先写出**可持久化、可压测、有故障测试**的单机 KV，M2 在其上实现 Raft 共识 →
 多节点、自动选主、可故障切换，M3 快照/压缩/组提交，M4 在线成员变更 + 线性一致读，
-M5 两段式持久化（锁内零 fsync）+ epoll Reactor + 流式快照/断点续传 + 指标。
+M5 两段式持久化（锁内零 fsync）+ epoll Reactor + 流式快照/断点续传 + 指标，
+M6 把存储层适配到本项目的 lsm 引擎（`LsmLogStore`，默认仍是 `FileLogStore`）。
 
 ---
 
@@ -58,7 +60,11 @@ cmake -S . -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_TSAN=ON && c
 ./build/bin/raftkv_cli --port 9527 bench 20000 --value-size 64   # QPS / avg / p50 / p99
 ```
 
-### 3. 跑 3 节点集群（M2–M5）
+### 3. 跑 3 节点集群（M2–M6）
+
+> M6 起可以用 `--log-engine lsm` 把日志引擎切到 lsm（需 configure 时用
+> `-DRAFTKV_LSM_DIR=<pinned lsm 源树>` 链接；默认 `file`。**未编译进 lsm 时 `--log-engine=lsm`
+> 会明确报错退出，绝不静默降级**）。
 
 ```bash
 PEERS="1=127.0.0.1:19601,2=127.0.0.1:19602,3=127.0.0.1:19603"
@@ -92,7 +98,7 @@ $CLI                                       # 不带命令 = 交互 REPL（put/ge
 
 ```bash
 ./build/bin/raftkv_tests          # M1：13/13（零依赖自测）
-./build/bin/raftkv_raft_tests     # M2–M5：94/94（gtest；含 A 组契约与 R 组 Reactor 用例）
+./build/bin/raftkv_raft_tests     # M2–M6：121/121（gtest；含 A 组契约、R 组 Reactor、M6 的 LsmLogStore 用例）
 
 # 端到端 + 故障注入（脚本会自己起/停节点、随机端口、每轮 verify missing 0）
 ./scripts/raft_e2e.sh                              # 3 节点基本路径
@@ -134,7 +140,8 @@ g++ -O2 -std=c++17 -o /tmp/fsbench scripts/fsbench_commit_latency.cpp && /tmp/fs
 | `--id N` | 必填 | 节点 id |
 | `--port P` | 必填 | 监听端口 |
 | `--peers "1=h:p,2=h:p,…"` | 必填 | 启动种子配置（可含自己；不在其中 = 动态加入的非投票节点） |
-| `--data-dir DIR` | `./raft-data-<id>` | 数据目录（`raft/raft.log`、`meta.dat`、`snapshot.dat`） |
+| `--data-dir DIR` | `./raft-data-<id>` | 数据目录（file 引擎：`raft/raft.log`、`meta.dat`、`snapshot.dat`；lsm 引擎：`raft-lsm/`） |
+| `--log-engine[=]file\|lsm` | `file` | 日志引擎（也可用环境变量 `RAFTKV_LOG_ENGINE`）；`lsm` 需 configure 时链接了 lsm，否则明确报错退出 |
 | `--snapshot-threshold N` | 10000 | 距上次快照多少条已应用条目触发一次快照 + 日志压缩 |
 | `--transport[=]sync\|reactor` | `sync` | 传输引擎（也可用环境变量 `RAFTKV_TRANSPORT`） |
 | `--inflight-per-peer N` | 1 | 异步引擎下每 peer 允许同时在途的 AppendEntries 批数（滑动窗口） |
@@ -267,6 +274,29 @@ reactor 稳定。默认仍是 `sync`（3 节点下高并发更省 CPU），**计
   TSan **94/94 且 0 报告**、干净重建 0 warning、`raft_e2e.sh` + `raft_fault/snapshot_fault/membership_fault`
   各 10 轮全 PASS、A/B 每格 `missing 0`
 - 复盘（面试口径：六个真 bug 的定位/根因/回归 + 两次负结果 + 方法论）见 **[docs/m5-review.md](docs/m5-review.md)**
+
+### M6：存储层适配（`LogStore` → lsm 引擎）
+
+- **`LsmLogStore`**（`src/raft/lsm_log_store.{h,cpp}`）：用本项目的 lsm 引擎承载 raft 的日志与
+  `term/votedFor`。键空间 `0x01||BE64(index)`（日志）+ `0x02"meta"`（meta）；value 逐字复用与
+  `FileLogStore` **同一份** `encodeEntry()`（抽到 `src/raft/log_entry_codec.h`，编译器保证不漂移）。
+  语义与 `FileLogStore` **逐方法等价**（`docs/m6-design.md` §2.4 的等价性表 + 20 条单测钉住）。
+- **开关**：`--log-engine=file|lsm` / `RAFTKV_LOG_ENGINE`，**默认 `file`**；未把 lsm 编进二进制时
+  `--log-engine=lsm` **明确报错退出**（绝不静默降级）。构建：`cmake -DRAFTKV_LSM_DIR=<pinned lsm 源树>`。
+- **必要的"更强"语义**：冲突覆盖 = 一个原子 `WriteBatch`（Delete+Put 同批，一次提交）；中间空洞 /
+  前缀丢失 = **拒绝启动**（lsm 的 WAL 保证下只可能是介质级损坏）；写失败 = **粘性毒化**（与 lsm 的 fail-stop 一致）。
+- **不碰 lsm 仓库、不碰 `~/raft-kv`**：`~/lsm-kv` 只读（`git archive <sha>` pin 后链接），
+  `~/raft-kv` 作为 A/B 基线原样保留。
+- **实测结论（[docs/m6-bench.md](docs/m6-bench.md)，27 格全 `missing 0`）**：
+  * `base`（远端基线）vs `file`（本仓默认引擎）三档都在 **±2%** 内 ⇒ **没有回归**；
+  * `lsm` vs `file`：延迟 **1.01×/1.05×/1.12×**（p=1/8/64），吞吐 **0.97×/0.95×/0.89×**
+    ⇒ **LSM 在本机略慢，但没有量级塌陷**（设计预测的 0.47× 未复现）；
+  * **空间是明确的负结果**：小负载日志目录 ≈1.5×；100k 条 + 频繁快照下 `raft-lsm/` 2.22–2.58 MB
+    vs `raft.log` 49 770 B（**≈50×**），且 `compact()` 只写 tombstone、物理回收要等后台 compaction；
+  * 未采集：P99/max 延迟（node 侧直方图未实现）、fsync 次数（`strace` 通道实测无效）。
+- 证据与偏差裁决：**[docs/m6-evidence.md](docs/m6-evidence.md)**；A/B 数字：**[docs/m6-bench.md](docs/m6-bench.md)**；
+  设计：**[docs/m6-design.md](docs/m6-design.md)**。
+
 
 ---
 
