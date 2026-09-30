@@ -396,3 +396,59 @@ $ ./build-nolsm/bin/raftkv_raft_tests --gtest_filter='LsmLogStore.*'
 3. **未验证**：LsmLogStore 在并发（多线程 append/sync/slice 交错）下的正确性 —— 本步单测是单线程的；TSan 覆盖在 M6.8/H12（设计 §5.2）与 M6.5/M6.6 的端到端。
 4. **未验证**：`slice()` 的解码失败路径（`slice_decode_errors`）与毒化路径 —— 未构造注入点（需要介质损坏）。
 5. **未验证**：性能（每次 `slice()` 建迭代器的开销 R2、`truncateSuffix` 的写放大 R3）—— M6.7。
+
+---
+
+## M6.3 `raft_restart_test` 参数化（磁盘用例跑两个引擎）
+
+### 交付
+
+* `tests/raft_restart_test.cpp`：用例体抽成 `template <typename Store> RestartRestoresMetaAndLogBody()`；
+  `FileLogStore.RestartRestoresMetaAndLog` **名字不变**、断言文本不变（现在是 `...Body<FileLogStore>()`）；
+  新增孪生 `LsmLogStore.RestartRestoresMetaAndLog`、`LsmLogStore.TruncatesTornTail`。
+* `tests/raft_lsm_log_test.cpp`：删除两条被取代的用例（见 M6.3-D2）。
+
+### 判据与原始输出
+
+```bash
+$ cmake --build build -j8 && cmake --build build -j8 2>&1 | grep -c 'warning:'
+[100%] Built target raftkv_raft_tests
+0
+
+$ ./build/bin/raftkv_raft_tests --gtest_filter='*RestartRestoresMetaAndLog:*TruncatesTornTail'
+[==========] Running 4 tests from 2 test suites.
+[----------] 2 tests from FileLogStore
+[ RUN      ] FileLogStore.RestartRestoresMetaAndLog
+[       OK ] FileLogStore.RestartRestoresMetaAndLog (47 ms)
+[ RUN      ] FileLogStore.TruncatesTornTail
+[       OK ] FileLogStore.TruncatesTornTail (17 ms)
+[----------] 2 tests from LsmLogStore
+[ RUN      ] LsmLogStore.RestartRestoresMetaAndLog
+[       OK ] LsmLogStore.RestartRestoresMetaAndLog (67 ms)
+[ RUN      ] LsmLogStore.TruncatesTornTail
+[       OK ] LsmLogStore.TruncatesTornTail (53 ms)
+[==========] 4 tests from 2 test suites ran. (190 ms total)
+[  PASSED  ] 4 tests.
+
+$ ./build/bin/raftkv_raft_tests            # 全量（与 M6.2 同量：114 条）
+[==========] 114 tests from 16 test suites ran. (44690 ms total)
+[  PASSED  ] 114 tests.
+
+$ grep -c 'RestartRestoresMetaAndLogBody<FileLogStore>' tests/raft_restart_test.cpp   # 1
+$ grep -c 'RestartRestoresMetaAndLogBody<LsmLogStore>'  tests/raft_restart_test.cpp   # 1
+⇒ 两个引擎跑的是**同一个函数体** ⇒ 断言文本逐字相同（不是「人工保持一致」）
+```
+
+### 偏差登记（M6.3）
+
+| ID | 设计写的 | 落地 | 裁决 |
+|---|---|---|---|
+| **M6.3-D1** | 设计 §4-M6.3 / §7 W9：「`TruncatesTornTail` 在 lsm 引擎下**没有直接的等价注入点**……若无法构造，如实标注『未覆盖』」 | **该判断被实测证伪**：`LsmLogStore::TruncatesTornTail` 用与 file 引擎**相同的注入手法**（在活动 WAL 尾部追加同一串垃圾）就能构造，且 `load()` 正确截断到 lastIndex=1，外加 `walTailTruncatedBytes() > 0` | 提供**真正的孪生**，不标注「未覆盖」。撕裂尾由 `DB::Open` 的恢复路径处理（`m2-design` §5.3）—— 设计 §3.3 的「对齐点 1」由此获得实测证据 |
+| **M6.3-D2** | 设计 §4-M6.2 的用例清单含 `LsmLogStore.RestartRestoresMetaAndLog`（M6.2 已交付） | M6.3 把同场景搬到 `raft_restart_test.cpp` 与 file 引擎共享用例体 ⇒ 会产生**同名重复定义**（链接冲突） | 删除 M6.2 的那条拷贝（以及被取代的 `TornWalTailIsTruncatedByOpenAndCounted`）。这是**合并而非削减**：同一场景现在由「一份 body + 两个引擎」覆盖，断言更强（多断言 `walTailTruncatedBytes > 0`），全量用例数 114 未变。M6.2 报告中「20 条」在 M6.3 后变为 18 条（+ M6.3 的 2 条孪生） |
+| **M6.3-D3** | 资源纪律 | 本步的增量构建与 44.7s 全量 gtest 期间，lsm 侧正在构建 `sync_isolation_probe`（R1 修复的工作） | 如实登记；本步全是功能断言、无计时，不受影响 |
+
+### 未做 / 未验证（M6.3 时点）
+
+1. **未做**：Disk fixture 参数化（M6.4）、e2e（M6.5）、故障注入（M6.6）、A/B（M6.7）。
+2. **未验证**：`RaftSnapshotDisk.*` / `RaftMembershipDisk.*` 在 lsm 引擎下的行为（M6.4）。
+3. **未验证**：`raft_restart_test` 之外，`LsmLogStore` 与 `RaftNode` 的**真实接线**（本步仍是 store 级用例；M6.4/M6.5 才接集群）。

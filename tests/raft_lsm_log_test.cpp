@@ -74,15 +74,6 @@ std::vector<std::string> readLogPayloads(const std::string& path) {
   }
   return out;
 }
-
-// 找到 <dir>/raft-lsm 下第一个 *.log（活动 WAL）。
-std::string firstWalPath(const std::string& dir) {
-  for (const auto& e : std::filesystem::directory_iterator(dir)) {
-    const std::string p = e.path().string();
-    if (p.size() >= 4 && p.compare(p.size() - 4, 4, ".log") == 0) return p;
-  }
-  return {};
-}
 #endif
 
 }  // namespace
@@ -123,33 +114,10 @@ TEST(LsmLogStore, MetaKeyIsOutsideLogRange) {
   }
 }
 
-// ---- §2.4.1 重启恢复（与 FileLogStore.RestartRestoresMetaAndLog 同一组断言）----
-
-TEST(LsmLogStore, RestartRestoresMetaAndLog) {
-  const std::string dir = tempDir();
-  {
-    LsmLogStore store(dir);
-    ASSERT_TRUE(store.persistMeta(2, 1));
-    std::vector<LogEntry> entries;
-    entries.push_back(entry(1, 1, "a", "1"));
-    entries.push_back(entry(2, 2, "b", "2"));
-    ASSERT_TRUE(store.append(entries));
-  }
-  {
-    LsmLogStore store(dir);
-    Term term = 0;
-    int votedFor = -1;
-    Index lastIndex = 0;
-    ASSERT_TRUE(store.load(term, votedFor, lastIndex));
-    EXPECT_EQ(term, 2);
-    EXPECT_EQ(votedFor, 1);
-    EXPECT_EQ(lastIndex, 2);
-    EXPECT_EQ(store.lastTerm(), 2);
-    EXPECT_EQ(store.termAt(1), 1);
-    EXPECT_EQ(store.termAt(2), 2);
-  }
-  std::filesystem::remove_all(dir);
-}
+// ---- §2.4.1 重启恢复 --------------------------------------------------------
+// 注意（M6.3）：`LsmLogStore.RestartRestoresMetaAndLog` **不在这里** —— 它已按设计 §4-M6.3
+// 搬到 tests/raft_restart_test.cpp，与 `FileLogStore.RestartRestoresMetaAndLog` 共用同一份
+// 用例体（两个引擎、逐字相同的断言文本）。同名重复定义会撞链接，且共享体比两份拷贝更强。
 
 // ---- §2.4.3 append 的 durable + 立即可见 ------------------------------------
 
@@ -579,33 +547,11 @@ TEST(LsmLogStore, LoadRefusesGapInTheMiddle) {
 
 // ---- §3.3/对齐点 1：撕裂 WAL 尾由 DB::Open 截断，并被计数（O8/D8）----------
 
-TEST(LsmLogStore, TornWalTailIsTruncatedByOpenAndCounted) {
-  const std::string dir = tempDir();
-  {
-    LsmLogStore store(dir);
-    std::vector<LogEntry> entries;
-    for (Index i = 1; i <= 2; ++i) entries.push_back(entry(i, 1, "k", "v"));
-    ASSERT_TRUE(store.append(entries));
-  }
-  const std::string wal = firstWalPath(dir + "/raft-lsm");
-  ASSERT_FALSE(wal.empty()) << "no *.log under raft-lsm";
-  {
-    std::ofstream out(wal, std::ios::binary | std::ios::app);
-    const char junk[] = "torn!";  // 半个帧头 ⇒ 尾部残骸
-    out.write(junk, sizeof(junk) - 1);
-  }
-  {
-    LsmLogStore store(dir);
-    EXPECT_GT(store.walTailTruncatedBytes(), 0u)
-        << "lsm 的恢复路径必须报告尾部截断，否则「lsm 版不处理撕裂尾」无法被证伪";
-    Term t = 0;
-    int v = -1;
-    Index li = 0;
-    ASSERT_TRUE(store.load(t, v, li));
-    EXPECT_EQ(li, 2u) << "截断后前缀必须完好";
-  }
-  std::filesystem::remove_all(dir);
-}
+// ---- §3.3/对齐点 1：撕裂 WAL 尾由 DB::Open 截断，并被计数（O8/D8）----------
+//
+// 注意（M6.3）：与 `FileLogStore.TruncatesTornTail` 同形的孪生用例已按设计 §4-M6.3
+// 落到 tests/raft_restart_test.cpp（`LsmLogStore.TruncatesTornTail`，同注入手法 + 同断言文本）。
+// 这里不再保留第二份拷贝，避免同一注入重复维护。
 
 // ---- M6.0-D3 的回归守卫：lsm 存下的 value 必须与 FileLogStore 写盘的 payload
 //      逐字节相同（两个引擎共用 log_entry_codec.h 的同一份实现）。----------------
