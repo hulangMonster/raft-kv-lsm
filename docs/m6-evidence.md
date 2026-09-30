@@ -688,3 +688,44 @@ raft_snapshot_fault: PASS                              # H6（file 臂不退化�
 2. **未验证**：`raft_snapshot_fault.sh` 在 lsm 下的 `LOG_BOUND` 是否在 **--repeat 50** 的长期运行中仍成立（重复的 kill -9/快照可能让 WAL/SST 累积更多）。
 3. **未验证**：`--strace` 的 fsync 次数（D5/R1 的判定数字）—— 在 M6.7 采集。
 4. **未验证**：file 引擎侧 `raft/` 目录字节（含 snapshot.dat ≈1.5 MB）的长期上界（既有脚本历史上只约束 raft.log）。
+
+---
+
+## M6.7 A/B 基准（§5）
+
+**数字与结论全部落在 `docs/m6-bench.md`**（27 格原始行 + 汇总表 + H1-H12 + O/D 采集状态 + R1-R7 负结果 + 未验证清单）。
+本节只登记口径、偏差与裁决。
+
+### 交付
+
+* `scripts/bench_m6_ab.sh`（新）：三臂（`base`=`~/raft-kv/build/bin`、`file`、`lsm`）同一脚本内交替
+  `base → file → lsm`，每档 200 写预热丢弃、重复 `--repeats` 次取中位数、每次 `fill` 后必 `verify`；
+  行格式在 `bench_m5_ab.sh` 的前缀列之后**追加** `logdir_bytes` / `open_ms_max` / `fsync_calls` /
+  `fsync_us_total`；任一格 `verify` 缺 `missing 0` ⇒ 退出码 1；**不设比值硬门禁**（D13）。
+* `docs/m6-bench.md`（新）：按设计 §6.4 的固定章节写。
+
+### 关键数字（详见 m6-bench.md §3）
+
+| pipeline | n | base ms/w | file ms/w | lsm ms/w | lsm/file 延迟 | lsm/file 吞吐 |
+|---|---|---|---|---|---|---|
+| 1 | 1000 | 34.365 | 33.847 | 34.178 | 1.01x | 0.97x |
+| 8 | 4000 | 6.078 | 5.712 | 5.994 | 1.05x | 0.95x |
+| 64 | 4000 | 2.979 | 2.902 | 3.264 | **1.12x** | **0.89x** |
+
+⇒ **base vs file 无回归（±2%）**；**lsm 略慢且随并发加深，但未出现 R1 预测的 0.47× 塌陷**；
+空间放大在小负载 ≈1.5×、在 100k+频繁快照下 ≈50×（R4 确认）。
+
+### 偏差登记（M6.7）
+
+| ID | 设计写的 | 落地 | 裁决 |
+|---|---|---|---|
+| **M6.7-D1** | §5.5 的正式口径 `n = 5000/20000/20000`（照搬 `bench_m5_ab.sh`） | 本轮用 `n = 1000/4000/4000`（每行都打印 `n=`） | 时间盒 + lsm 臂写吞吐限制；偏差与影响写进 `m6-bench.md` §7 第 9 条 |
+| **M6.7-D2** | §5.2 H9：「`base` 臂在同一套脚本（H2-H7）下必须全部通过」 | 只跑了 A/B 的 base 臂（27 格全 `missing 0`）；**没有**用 `~/raft-kv/scripts/*.sh` 跑 base 的 e2e/fault | 未做项如实登记（`m6-bench.md` §4/§7）；A/B 的 base 列仍然证明「基线 vs 工作区」的可比性 |
+| **M6.7-D3** | §5.2 O4/D5：用 `strace -f -e trace=fsync,fdatasync -c` 采 leader 的 fsync 次数 | 实测该通道**无效**：strace 让系统慢 3-4×，连 `base` 臂都出现 `missing 269`（H8 失败），且 `-c` 汇总在读文件时未落盘（`fsync_calls=0`） | D5 **按未采集**入档（不编数字）；该轮原始行保留在 `m6-bench.md` §2 末并明确标注**作废** |
+| **M6.7-D4** | §5.2 O1/D2 要 P99 / max；D12 授权「为本里程碑引入 P99 采样」 | node 侧直方图**未实现**（本轮只做存储层适配，没动 `status`/`Metrics`） | P99/max **未采集**，如实入档（`m6-bench.md` §5/§7） |
+| **M6.7-D5** | 计时敏感基准不得与另一侧重活并发 | 正式 27 格期间 VM loadavg 4.7–5.4（另一 agent 的构建/测试窗口），三臂**同轮交替**把相对比较的偏置压到最小 | 如实登记为已知限制；绝对 qps 请以安静机器重测为准 |
+
+### 未做 / 未验证（M6.7 时点）
+
+见 `docs/m6-bench.md` §7 的 11 条（H11/H12 未做、base 臂脚本门禁未跑、`snapshot_fault --repeat 50` 未跑完、
+P99 未采集、D5 通道无效、lsm 内部统计未接线、D4 口径未采集、正式 n 未达、R2/R3 无定向性能数字、机器安静度限制）。
