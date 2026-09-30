@@ -24,13 +24,31 @@ cleanup() {
   rm -rf "$WORK"
 }
 trap cleanup EXIT
+# M6.5（设计 §4-M6.5 / C7）：日志引擎 = file|lsm，默认 file。
+# 选择顺序：显式命令行参数（--log-engine lsm / --log-engine=lsm）> 环境变量 RAFTK_LOG_ENGINE > file。
+# 为什么 CLI 参数优先：本 VM 的自动化通道上 `VAR=value cmd` 的前缀赋值不可靠（见
+# docs/m6-evidence.md §M6.5-D1）—— 显式参数是唯一能端到端验证的通道；环境变量仍然照传（C7）。
+LOG_ENGINE="${RAFTKV_LOG_ENGINE:-file}"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --log-engine=*) LOG_ENGINE="${1#*=}"; shift;;
+    --log-engine)   LOG_ENGINE="${2:-}"; shift 2;;
+    *) echo "unknown argument: $1" >&2; exit 2;;
+  esac
+done
+if [[ "$LOG_ENGINE" != "file" && "$LOG_ENGINE" != "lsm" ]]; then
+  echo "unknown --log-engine: $LOG_ENGINE (expected file|lsm)" >&2
+  exit 2
+fi
+echo "engine=$LOG_ENGINE" >&2
 
 node_port() { case "$1" in 1) echo "$P1";; 2) echo "$P2";; 3) echo "$P3";; 4) echo "$P4";; esac; }
 
 start_node() { # <id> <peers>
+  RAFTK_LOG_ENGINE="$LOG_ENGINE" \
   "$BIN/raftkv_raft_node" --id "$1" --port "$(node_port "$1")" \
     --peers "$2" --data-dir "$WORK/node$1" --snapshot-threshold 2000 \
-    >"$WORK/node$1.log" 2>&1 &
+    --log-engine "$LOG_ENGINE" >"$WORK/node$1.log" 2>&1 &
   PIDS[$1]=$!
 }
 

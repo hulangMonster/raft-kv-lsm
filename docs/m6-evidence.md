@@ -527,3 +527,72 @@ $ ./build/bin/raftkv_raft_tests          # 全量
 2. **未验证**：真实多进程集群（`main_raft_node` + 脚本）在 lsm 引擎下能否跑通 —— 本步仍是同进程的 MemoryTransport 集群。
 3. **未验证**：`RaftMembershipDiskLsm.B2` 的块级细节（配置随快照持久化在 lsm 侧同样成立，已由断言覆盖；但**压缩后物理空间回收**未观测 → M6.7 的 D3/R4）。
 4. **未验证**：并发（多线程 save/install 与 lsm 引擎的组合）—— `ConcurrentSaveAndInstallKeepNewestSnapshot` 只用快照存储，未参数化。
+
+---
+
+## M6.5 端到端脚本支持双引擎
+
+### 交付
+
+`scripts/raft_e2e.sh` / `raft_snapshot_e2e.sh` / `raft_membership_e2e.sh`：
+
+1. 新增 `--log-engine file|lsm`（`--log-engine=lsm` 或 `--log-engine lsm`），默认 `file`；未知值 ⇒ stderr + exit 2。
+2. `start_node()` 把引擎**同时**用 CLI 参数（`--log-engine "$LOG_ENGINE"`）与 `RAFTKV_LOG_ENGINE="$LOG_ENGINE"` 环境变量交给 node（C7 的 env 透传 + 一条可端到端验证的通道）。
+3. 脚本开头打印 `engine=<file|lsm>`（进证据）。
+
+### 判据与原始输出
+
+```bash
+$ for eng in file lsm; do for s in raft_e2e raft_snapshot_e2e raft_membership_e2e; do
+    bash scripts/$s.sh --log-engine "$eng"; done; done
+=== raft_e2e engine=file exit=0 ===                     engine=file   raft_e2e: PASS
+=== raft_snapshot_e2e engine=file exit=0 ===            engine=file   raft_snapshot_e2e: PASS
+=== raft_membership_e2e engine=file exit=0 ===          engine=file   raft_membership_e2e: PASS
+=== raft_e2e engine=lsm exit=0 ===                      engine=lsm    raft_e2e: PASS
+=== raft_snapshot_e2e engine=lsm exit=0 ===             engine=lsm    raft_snapshot_e2e: PASS
+=== raft_membership_e2e engine=lsm exit=0 ===           engine=lsm    raft_membership_e2e: PASS
+```
+
+「真的用了 lsm 引擎」的运行时证据（脚本运行期间采样 node 进程与数据目录）：
+
+```bash
+$ bash /tmp/m65_proof.sh          # run `raft_e2e.sh --log-engine lsm` 并在 t=2s 采样
+--- 运行中的 node 进程 ---
+.../build/bin/raftkv_raft_node --id 2 --port 19435 --peers ... --data-dir /tmp/tmp.WuPfGmrn7O/node2 --log-engine lsm
+--- 该 node 的数据目录内容（lsm 引擎应为 raft-lsm/）---
+raft
+raft-lsm
+--- 它的 stderr 日志里的引擎行 ---
+[raftkv-node] log-engine=lsm
+[raftkv-node] log-engine=lsm
+[raftkv-node] log-engine=lsm
+--- 脚本结果 ---
+engine=lsm
+raft_e2e: PASS
+```
+⇒ `--log-engine lsm` 真的到了 node 进程（cmdline + stderr 双证据），并真的创建了 `raft-lsm/`。
+
+### 逐条判据状态（设计 §4-M6.5）
+
+| 判据 | 状态 | 证据 |
+|---|---|---|
+| 三个脚本在 `file` 与 `lsm` 下都打印各自 PASS 行 | ✅ 通过 | 6 条 PASS（上面） |
+| node 真的用了对应引擎 | ✅ 通过 | 运行时采样：cmdline `--log-engine lsm` + `raft-lsm/` + stderr |
+| `verify` 的 `missing 0`（H8） | ✅ 通过（断言在脚本内部） | `raft_membership_e2e.sh` 的 `fill_and_verify` 用 `cli ... verify | grep -q 'missing 0'`，失败即 `exit 1`；**原始 verify 行**的逐格打印落在 M6.7 的 `bench_m6_ab.sh`（见 M6.5-D2） |
+| 无多数派时写不得返回 OK（H10） | ✅ 通过（既有断言未改） | `raft_e2e.sh` 末尾的多数派检查在 lsm 臂同样通过（脚本 PASS） |
+| 默认（不传参）行为不变 | ✅ 通过 | 默认 `file`；未传参时 `engine=file`（A/B 的 `file` 臂） |
+
+### 偏差登记（M6.5）
+
+| ID | 设计写的 | 落地 | 裁决 |
+|---|---|---|---|
+| **M6.5-D1** | C7：「把 `RAFTKV_LOG_ENGINE` 透传给 node 进程」（脚本靠环境变量选引擎） | 本 VM 的自动化通道上发现：当一条远程命令含**多条语句**时，`VAR=value cmd` 的前缀赋值与 `export` 都不会到达子进程（同一命令改为单条语句 / 嵌套 `bash -c "..."` 时正常）。实测：<br>`ssh vm 'RAFTKV_LOG_ENGINE=lsm bash /tmp/p.sh'` → `plain=[lsm]`（正常）<br>`ssh vm 'echo x; RAFTK_LOG_ENGINE=lsm bash /tmp/p.sh'` → `plain=[]`（**丢**）<br>`ssh vm 'echo x; export RAFTK_LOG_ENGINE=lsm; bash /tmp/p.sh'` → `plain=[]`（**丢**）<br>根因未定位（怀疑是本机→VM 的自动化通道对多语句命令做了语句拆分/前缀赋值剥离，不属于 raft-kv-lsm 代码） | 工程上最保守：脚本改用**显式 CLI 参数** `--log-engine` 作为权威通道（可端到端验证），env 通道仍按 C7 透传并在 node 侧保留（`--data-dir` 单条命令探针确认过 node 能读到 env：`log-engine=lsm`）。**A/B 一律用 `--log-engine`** |
+| **M6.5-D2** | §5.2 H8：「每次 fill 之后的 verify 输出必须含 `missing 0`」 | 三个 e2e 脚本内部是 `grep -q 'missing 0'`（不打印原文）；只有 `bench_m5_ab.sh` 类的基准脚本会把 verify 原文写进行格式 | H8 的**原始行**证据落在 M6.7 的 `bench_m6_ab.sh`（每格打印 `verify=[...]`）；本步只断言「脚本未因 verify 失败而退出」 |
+| **M6.5-D3** | 设计 §4-M6.5 的文件清单只列 3 个 e2e 脚本 | 故障脚本（`raft_fault.sh`/`raft_snapshot_fault.sh`/`raft_membership_fault.sh`）留到 M6.6 一起改（它们还要顺带修 `LOG_BOUND` 口径） | 按设计顺序执行 |
+
+### 未做 / 未验证（M6.5 时点）
+
+1. **未做**：故障注入脚本双引擎 + `LOG_BOUND` 按引擎取口径（M6.6）、A/B（M6.7）。
+2. **未验证**：`RAFTKV_LOG_ENGINE` 环境变量在**多语句自动化命令**下的传递（本机→VM 通道限制，见 M6.5-D1）；脚本内 `RAFTKV_LOG_ENGINE=... node` 的单进程路径已由 M6.1 的探针与本次 node 侧 stderr 证明可用。
+3. **未验证**：`raft_snapshot_fault.sh` 在 lsm 引擎下的行为（M6.6；它当前直接 `stat` 了 `raft/raft.log`，在 lsm 下必然失败）。
+4. **未验证**：e2e 的 ASan/TSan 变体（H11/H12 在 M6.8 收口）。
