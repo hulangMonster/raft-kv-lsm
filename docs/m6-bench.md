@@ -21,6 +21,10 @@ Linux 6.8.0-138-generic
 
 ## 2. 原始行（`scripts/bench_m6_ab.sh --repeats 3 --pipelines "1 8 64"`，27 格逐行粘贴）
 
+> 两轮 A/B 的唯一差别是**链接的 lsm 基座**；旧行**保留不改**，并显式标注基座 sha。
+
+### 2.1 第一轮（lsm 基座 **b1bd050**，R1 未修）
+
 ```
 base p=1 rep=1 n=1000 ms=36061.2 ms_per_write=36.061 qps=28 verify=[verified 1000 missing 0] logdir_bytes=193887 open_ms_max=161 fsync_calls=NA fsync_us_total=NA
 file p=1 rep=1 n=1000 ms=33846.9 ms_per_write=33.847 qps=30 verify=[verified 1000 missing 0] logdir_bytes=193887 open_ms_max=137 fsync_calls=NA fsync_us_total=NA
@@ -61,7 +65,46 @@ file p=8 rep=1 n=500 ms=46753.6 ms_per_write=93.507  qps=11 verify=[verified 500
 lsm  p=8 rep=1 n=500 ms=14750.7 ms_per_write=29.501  qps=34 verify=[verified 500 missing 0]   logdir_bytes=161791 open_ms_max=652 fsync_calls=0 fsync_us_total=0
 ```
 
+
+### 2.2 第二轮（lsm 基座 **f06a44d**，R1 已修；2026-10-01 07:26 起）
+
+命令与口径与 §2.1 **完全相同**（`--repeats 3 --pipelines "1 8 64"`，三臂同轮交替），
+唯一差别是链接的 lsm 基座：`f06a44d`（父 `b1bd050`）——`DB::Sync()` 的 fsync 不再持 `commit_mu_`
+（WAL 叶子锁 + `shared_ptr` 生命周期）。原始 raw：`/tmp/m6bench-logs/raw-1790810796.txt`。
+
+```
+base p=1 rep=1 n=1000 ms=34923.7 ms_per_write=34.924 qps=29 verify=[verified 1000 missing 0] logdir_bytes=193887 open_ms_max=137 fsync_calls=NA fsync_us_total=NA
+file p=1 rep=1 n=1000 ms=34125.5 ms_per_write=34.126 qps=29 verify=[verified 1000 missing 0] logdir_bytes=193887 open_ms_max=135 fsync_calls=NA fsync_us_total=NA
+lsm p=1 rep=1 n=1000 ms=34887.8 ms_per_write=34.888 qps=29 verify=[verified 1000 missing 0] logdir_bytes=289242 open_ms_max=135 fsync_calls=NA fsync_us_total=NA
+base p=1 rep=2 n=1000 ms=34504.1 ms_per_write=34.504 qps=29 verify=[verified 1000 missing 0] logdir_bytes=193887 open_ms_max=130 fsync_calls=NA fsync_us_total=NA
+file p=1 rep=2 n=1000 ms=34715.2 ms_per_write=34.715 qps=29 verify=[verified 1000 missing 0] logdir_bytes=193887 open_ms_max=143 fsync_calls=NA fsync_us_total=NA
+lsm p=1 rep=2 n=1000 ms=35002.0 ms_per_write=35.002 qps=29 verify=[verified 1000 missing 0] logdir_bytes=289203 open_ms_max=119 fsync_calls=NA fsync_us_total=NA
+base p=1 rep=3 n=1000 ms=33684.9 ms_per_write=33.685 qps=30 verify=[verified 1000 missing 0] logdir_bytes=193887 open_ms_max=146 fsync_calls=NA fsync_us_total=NA
+file p=1 rep=3 n=1000 ms=34606.0 ms_per_write=34.606 qps=29 verify=[verified 1000 missing 0] logdir_bytes=193887 open_ms_max=148 fsync_calls=NA fsync_us_total=NA
+lsm p=1 rep=3 n=1000 ms=35163.6 ms_per_write=35.164 qps=28 verify=[verified 1000 missing 0] logdir_bytes=289242 open_ms_max=152 fsync_calls=NA fsync_us_total=NA
+base p=8 rep=1 n=4000 ms=21918.9 ms_per_write=5.480 qps=182 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=141 fsync_calls=NA fsync_us_total=NA
+file p=8 rep=1 n=4000 ms=22785.3 ms_per_write=5.696 qps=176 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=139 fsync_calls=NA fsync_us_total=NA
+lsm p=8 rep=1 n=4000 ms=21583.7 ms_per_write=5.396 qps=185 verify=[verified 4000 missing 0] logdir_bytes=862084 open_ms_max=142 fsync_calls=NA fsync_us_total=NA
+base p=8 rep=2 n=4000 ms=22592.0 ms_per_write=5.648 qps=177 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=138 fsync_calls=NA fsync_us_total=NA
+file p=8 rep=2 n=4000 ms=22009.6 ms_per_write=5.502 qps=182 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=147 fsync_calls=NA fsync_us_total=NA
+lsm p=8 rep=2 n=4000 ms=21463.9 ms_per_write=5.366 qps=186 verify=[verified 4000 missing 0] logdir_bytes=862011 open_ms_max=146 fsync_calls=NA fsync_us_total=NA
+base p=8 rep=3 n=4000 ms=22221.8 ms_per_write=5.555 qps=180 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=134 fsync_calls=NA fsync_us_total=NA
+file p=8 rep=3 n=4000 ms=22054.5 ms_per_write=5.514 qps=181 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=144 fsync_calls=NA fsync_us_total=NA
+lsm p=8 rep=3 n=4000 ms=20904.1 ms_per_write=5.226 qps=191 verify=[verified 4000 missing 0] logdir_bytes=861971 open_ms_max=134 fsync_calls=NA fsync_us_total=NA
+base p=64 rep=1 n=4000 ms=11247.2 ms_per_write=2.812 qps=356 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=133 fsync_calls=NA fsync_us_total=NA
+file p=64 rep=1 n=4000 ms=11596.9 ms_per_write=2.899 qps=345 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=153 fsync_calls=NA fsync_us_total=NA
+lsm p=64 rep=1 n=4000 ms=10520.0 ms_per_write=2.630 qps=380 verify=[verified 4000 missing 0] logdir_bytes=843623 open_ms_max=143 fsync_calls=NA fsync_us_total=NA
+base p=64 rep=2 n=4000 ms=11520.9 ms_per_write=2.880 qps=347 verify=[verified 4000 missing 0] logdir_bytes=689034 open_ms_max=143 fsync_calls=NA fsync_us_total=NA
+file p=64 rep=2 n=4000 ms=11256.2 ms_per_write=2.814 qps=355 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=138 fsync_calls=NA fsync_us_total=NA
+lsm p=64 rep=2 n=4000 ms=10239.8 ms_per_write=2.560 qps=391 verify=[verified 4000 missing 0] logdir_bytes=843619 open_ms_max=151 fsync_calls=NA fsync_us_total=NA
+base p=64 rep=3 n=4000 ms=10792.6 ms_per_write=2.698 qps=371 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=145 fsync_calls=NA fsync_us_total=NA
+file p=64 rep=3 n=4000 ms=11078.7 ms_per_write=2.770 qps=361 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=141 fsync_calls=NA fsync_us_total=NA
+lsm p=64 rep=3 n=4000 ms=10479.0 ms_per_write=2.620 qps=382 verify=[verified 4000 missing 0] logdir_bytes=843275 open_ms_max=145 fsync_calls=NA fsync_us_total=NA
+```
+
 ## 3. 汇总表（每格 = 3 次中位数）
+
+### 3.1 第一轮（lsm 基座 b1bd050，R1 未修）
 
 | pipeline | n | base ms/w | file ms/w | lsm ms/w | base qps | file qps | lsm qps | lsm/file 延迟 | lsm/file 吞吐 | verify | 判定 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -79,6 +122,26 @@ lsm  p=8 rep=1 n=500 ms=14750.7 ms_per_write=29.501  qps=34 verify=[verified 500
   vs file `raft.log` 49 770 B）——见 §6.4 R4。
 * 启动（`open_ms_max`，从 exec 到 `status` 首次可用，3 节点取最大）：base 133–175 ms、
   file 137–171 ms、lsm 134–150 ms ⇒ 本负载下**无差异**（注意：这不是 D4 的口径，见 §5）。
+
+
+### 3.2 第二轮（基座 f06a44d，R1 已修）
+
+| pipeline | n | base ms/w | file ms/w | lsm ms/w | base qps | file qps | lsm qps | lsm/file 延迟 | lsm/file 吞吐 | verify | 判定 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1000 | 34.504 | 34.606 | 35.002 | 29 | 29 | 29 | 1.01x | 1.00x | missing 0 | 不设比值硬门禁（D13） |
+| 8 | 4000 | 5.555 | 5.514 | **5.366** | 180 | 181 | 186 | **0.97x** | **1.03x** | missing 0 | 不设比值硬门禁（D13） |
+| 64 | 4000 | 2.812 | 2.814 | **2.620** | 356 | 355 | 382 | **0.93x** | **1.08x** | missing 0 | 不设比值硬门禁（D13） |
+
+* **base vs file**：34.606/34.504、5.514/5.555、2.814/2.812 —— 仍在 ±1% 内 ⇒ 依然**无可测回归**。
+* **lsm vs file（与 §3.1 相比结论反转）**：延迟 **1.01× / 0.97× / 0.93×**，吞吐 **1.00× / 1.03× / 1.08×**
+  ⇒ R1 修复后，lsm 在 p=8/p=64 **反超 file**（p=64 快 ~7%），p=1 持平。
+* **设计 §6 R1 预测的 0.47× 塌陷**：在 b1bd050 上**未出现**（本轮修前是 0.89× 吞吐）；在 f06a44d 上
+  连「劣化」本身都反转成正向。⇒ R1 的**结构性缺陷确实存在**（代码注释与父代理裁决），
+  但在**本机的负载口径**（3 节点单机、n≤4000、p≤64）下，它并没有表现为量级塌陷；
+  修复的价值体现在 p=64 的 +8% 吞吐（以及 `Sync()` 不再阻塞并发入队这一结构性质）。
+* 空间（`logdir_bytes` 三节点合计）：base/file = 193 887 B（n=1000）/688 887 B（n=4000）；
+  lsm = 289 242 B / 843 275–862 084 B ⇒ 与 §3.1 同量级（≈1.49× / ≈1.22–1.25×）。
+  **R4（大负载 ≈50×）不受 R1 修复影响**——那是 `compact()` 只写 tombstone + 后台回收造成的。
 
 ## 4. 硬门禁 H1–H12 的结果
 
@@ -116,12 +179,20 @@ lsm  p=8 rep=1 n=500 ms=14750.7 ms_per_write=29.501  qps=34 verify=[verified 500
 
 ## 6. 负结果（设计 §6）
 
-### 6.1 R1 —— `DB::Sync()` 持 `commit_mu_` 做 fsync 是否把组提交打散？→ **未确认**
+### 6.1 R1 —— `DB::Sync()` 持 `commit_mu_` 做 fsync 是否把组提交打散？→ **缺陷真实存在；本机口径下未出现量级塌陷；f06a44d 修复后 lsm 反而更快**
 干净 A/B 的三档里 lsm/file 延迟 = 1.01×/1.05×/**1.12×**、吞吐 = 0.97×/0.95×/**0.89×**，
 **没有**出现设计预测的 0.47× 量级塌陷。**但这不等于 R1 不存在**：D5（fsync 次数）没有可信数字，
 所以「组提交是否被打散」**无法直接判定**。定性旁证：在**并发重活**（另一 agent 的 ASan/TSan
 构建与 `lsm_tests`，loadavg 峰值 15.9）下，lsm 臂的 100k 条 fill 用了 ~13 分钟（≈108 写/秒），
 同机 file 臂约 5 分钟（≈300 写/秒）——方向与 R1 一致，但该数字被污染，不作为结论。
+
+**第二轮（基座 f06a44d，R1 已修）**：同样口径的 27 格 A/B 里，lsm/file 延迟 = **1.01×/0.97×/0.93×**、
+吞吐 = **1.00×/1.03×/1.08×**（p=1/8/64，见 §3.2）⇒ 修前「略慢」、修后「p=8/64 反超」。
+结论：R1 的结构性缺陷（fsync 期间阻塞入队）是真实的（`f06a44d` 的 `Sync()` 已把 fsync 移出
+`commit_mu_`，见该提交注释），但它在**本机 3 节点 / n≤4000 / p≤64** 的口径下**没有**表现为
+0.47× 那样的塌陷；修复的可见收益是 p=64 吞吐 +8%（3.264→2.620 ms/write 对比 file 2.814→2.620）。
+D5（fsync 次数）仍**没有**可信数字：`strace` 通道无效（§2.1 末），node 侧 `fsync_calls` 计数
+已在 §5 的补充轮采集（若该轮完成）；没有它之前，本节的因果解释只能算「A/B 现象 + 代码结构」两条证据。
 
 ### 6.2 R2 —— `slice()` 每次建 lsm 迭代器 → **未单独测量**
 心跳路径的开销被合并进 p=1 的 +1% 延迟里；没有单独的 slice 计数/耗时（D10 未导出）。
@@ -170,4 +241,16 @@ lsm  p=8 rep=1 n=500 ms=14750.7 ms_per_write=29.501  qps=34 verify=[verified 500
 * **空间**：小负载 ≈1.5×；100k + 频繁快照 ≈50×（R4 确认）。
 * **说得更谨慎一点**：本结论只覆盖「单机 3 节点、n≤4000、无 P99、无 fsync 计数」的口径；
   高并发大负载 + 无重活干扰下的数字**未验证**。
+
+### 8.1 第二轮（基座 f06a44d，R1 已修）—— 结论**发生变化**
+
+* **base vs file**：仍是 ±1%（34.606/34.504、5.514/5.555、2.814/2.812）⇒ 依然无可测回归。
+* **lsm vs file**：延迟 **1.01× / 0.97× / 0.93×**、吞吐 **1.00× / 1.03× / 1.08×**
+  ⇒ p=1 持平、**p=8/p=64 lsm 反超 file**（p=64 快约 7%）。这与第一轮（1.05×/1.12× 更慢）
+  **方向相反**，如实入档：R1 修复对高并发格子是净正收益。
+* 设计 §6 R1 预测的 0.47× 塌陷：**两轮都没有出现**。第一轮是 0.89×（温和劣化），
+  第二轮是 1.08×（温和反超）。
+* 空间（R4）**不受 R1 修复影响**：仍是大负载下 ≈50×（§6.4）、小负载 ≈1.2–1.5×。
+* 仍然未采集：P99 的**节点侧**分位（补充轮若完成见 §5）、fsync 次数（strace 通道无效）、
+  100k 条后的启动恢复（D4）、正式口径 n。
 * **并发正确性门禁已收口**：ASan 全量 121/121、TSan 的 `LsmLogStore.*` 20/20，均 0 warning、0 报告（H11/H12）。

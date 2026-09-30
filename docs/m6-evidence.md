@@ -762,3 +762,20 @@ $ setarch $(uname -m) -R ./build-tsan/bin/raftkv_raft_tests --gtest_filter='LsmL
    本轮**没有**触碰 `~/lsm-kv`（只读）。
 2. **最终 HEAD 的单测门禁**：`./build/bin/raftkv_raft_tests` = **121/121 PASSED**（47713 ms），
    `git status --short` 空，全部提交已 `push origin main`（未打 tag —— tag 由父代理打）。
+
+---
+
+## M6.7 第二轮（基座 f06a44d，R1 已修）—— A/B 重跑
+
+* **基座变更登记**：`b1bd050` → **`f06a44d`**（父 `b1bd050`；R1 修复：`Sync()`/`RotateLog()` 的 fsync
+  不再持 `commit_mu_`，WAL 叶子锁 + `shared_ptr` 生命周期）。pin：`/tmp/lsm-pin-f06a44d`（`git archive`）。
+  **已知限制：基座自 b1bd050 更换为 f06a44d，R1 已修** —— 因此两轮 A/B 的数字不可跨轮直接比较，
+  `docs/m6-bench.md` 把两轮的原始行与汇总表**分节并列**（§2.1/§2.2、§3.1/§3.2）。
+* 口径与第一轮完全相同：`--repeats 3 --pipelines "1 8 64"`、三臂同轮交替、每格 `verify` 必须 `missing 0`。
+* **结论变化（如实，不粉饰）**：`lsm/file` 延迟 1.05×/1.12× → **0.97×/0.93×**（p=8/64），
+  吞吐 0.95×/0.89× → **1.03×/1.08×** ⇒ 修后 **p=8/p=64 的 lsm 反超 file**；p=1 持平（1.01×）。
+  `base vs file` 仍 ±1%（无可测回归）。设计 §6 R1 预测的 0.47× 塌陷**两轮都没有出现**。
+* 空间（R4）**不受 R1 修复影响**（大负载 ≈50×，小负载 ≈1.2–1.5×）。
+* 该轮还有：全量单测 **121/121 PASSED**（48 296 ms，基座 f06a44d 重建后重跑）、
+  `raft_snapshot_fault.sh --log-engine lsm --repeat 50`（结果见本节尾部/后续提交）。
+* 仍未采集：节点侧 P99 分位与 fsync 计数（补充轮）、100k 条后的启动恢复耗时（D4）、正式口径 n。
