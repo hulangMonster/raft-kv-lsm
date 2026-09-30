@@ -596,3 +596,95 @@ raft_e2e: PASS
 2. **未验证**：`RAFTKV_LOG_ENGINE` 环境变量在**多语句自动化命令**下的传递（本机→VM 通道限制，见 M6.5-D1）；脚本内 `RAFTKV_LOG_ENGINE=... node` 的单进程路径已由 M6.1 的探针与本次 node 侧 stderr 证明可用。
 3. **未验证**：`raft_snapshot_fault.sh` 在 lsm 引擎下的行为（M6.6；它当前直接 `stat` 了 `raft/raft.log`，在 lsm 下必然失败）。
 4. **未验证**：e2e 的 ASan/TSan 变体（H11/H12 在 M6.8 收口）。
+
+---
+
+## M6.6 故障注入 + `LOG_BOUND` 按引擎取口径（C6/D9）
+
+### 交付
+
+| 文件 | 改动 |
+|---|---|
+| `scripts/raft_fault.sh` | `--log-engine file\|lsm`（解析循环同时保留 `--repeat`）；`start_node` 同时用 CLI 参数 + `RAFTKV_LOG_ENGINE` 把引擎交给 node；开头打印 `engine=` |
+| `scripts/raft_membership_fault.sh` | 同上（6 节点、`--snapshot-threshold 1000`） |
+| `scripts/raft_snapshot_fault.sh` | 同上 + **`LOG_BOUND` 按引擎取口径**：file = `<data-dir>/raft/raft.log` 字节 ≤ 1 MiB（既有判据不变）；lsm = `<data-dir>/raft-lsm` **目录总字节** ≤ `LSM_LOG_BOUND`（**实测标定**值 4 MiB，见下）；每个节点打印两个目录的字节数（`raft/`、`raft-lsm/`）供复标定 |
+
+### LOG_BOUND 的实测标定（不是文件大小启发式）
+
+```bash
+$ bash scripts/raft_snapshot_fault.sh --log-engine lsm --repeat 1     # 先用 32 MiB 的临时上界观测
+  node1 raft-lsm=2561634 bytes (bound=33554432; raft/=1489627 raft-lsm/=2561634)
+  node2 raft-lsm=2579679 bytes (bound=33554432; raft/=1489627 raft-lsm/=2579679)
+  node3 raft-lsm=2223606 bytes (bound=33554432; raft/=1486957 raft-lsm/=2223606)
+A) 100000 entries applied, log bounded (engine=lsm, bound=33554432, bytes=2223606)
+
+$ bash scripts/raft_snapshot_fault.sh --log-engine file --repeat 1    # 对照臂
+  node3 raft/raft.log=49770 bytes (bound=1048576; raft/=1531422 raft-lsm/=0)
+A) 100000 entries applied, log bounded (engine=file, bound=1048576, bytes=49770)
+```
+⇒ 标定：`LSM_LOG_BOUND = 4194304`（4 MiB）= 实测最大值 `2579679 B` 的 ~1.6×。
+**这是真实的空间负结果（R4 确认）**：同一负载（100k 条 + 每 2000 条一次快照）下，
+lsm 的日志目录稳态是 **2.22–2.58 MB**，而 file 引擎的 `raft.log` 只有 **49 770 B**（≈ **45–52×**）；
+且 lsm 侧 `compact()` 只写 tombstone，物理空间要等后台 compaction 才回收。
+**file 引擎的 1 MiB 判据保持原样**（D9：改了它会让 M2-M5 的历史判据口径漂移）。
+
+### 判据与原始输出
+
+```bash
+$ bash scripts/raft_fault.sh --log-engine file --repeat 50
+engine=file
+raft_fault: PASS (50 iterations)                       # H5（file 臂不退化）
+
+$ bash scripts/raft_fault.sh --log-engine lsm --repeat 50
+engine=lsm
+raft_fault: PASS (50 iterations)                       # H5（lsm 臂）
+
+$ bash scripts/raft_membership_fault.sh --log-engine lsm --repeat 50
+engine=lsm
+raft_membership_fault: PASS (50 iterations)            # H7（lsm 臂）
+
+$ bash scripts/raft_snapshot_fault.sh --log-engine lsm --repeat 1
+engine=lsm
+  node1 raft-lsm=2561634 bytes ... / node2 ... / node3 ...
+A) 100000 entries applied, log bounded (engine=lsm, bound=4194304, bytes=2223606)
+B) empty node caught up via InstallSnapshot (last_applied=125742)
+C) fault injection PASS (1 iterations)
+raft_snapshot_fault: PASS                              # H6（lsm 臂；--repeat 50 见下方说明）
+
+$ bash scripts/raft_snapshot_fault.sh --log-engine file --repeat 1
+engine=file
+A) 100000 entries applied, log bounded (engine=file, bound=1048576, bytes=49770)
+B) empty node caught up via InstallSnapshot (last_applied=102142)
+C) fault injection PASS (1 iterations)
+raft_snapshot_fault: PASS                              # H6（file 臂不退化）
+```
+
+**耗时观察（不是基准，机器同时被别的重活占用，只作定性记录）**：lsm 臂的 A 段
+（`fill 100000 --pipeline 64`）实测 ~13 分钟（≈108 写/秒）；同机 file 臂约 5 分钟（≈300 写/秒）。
+与设计 §6 R1 的预测方向一致，但**本数字不可作为 A/B 结论**（并发重活污染，见 M6.6-D3）。
+
+### 逐条判据状态（设计 §4-M6.6）
+
+| 判据 | 状态 | 证据 |
+|---|---|---|
+| lsm 下 `raft_fault.sh --repeat 50` PASS | ✅ 通过 | `raft_fault: PASS (50 iterations)` |
+| lsm 下 `raft_membership_fault.sh --repeat 50` PASS | ✅ 通过 | `raft_membership_fault: PASS (50 iterations)` |
+| lsm 下 `raft_snapshot_fault.sh` PASS | ✅ 通过（`--repeat 1`；`--repeat 50` 见未验证清单） | `raft_snapshot_fault: PASS` |
+| `LOG_BOUND` 在 lsm 下改为目录总字节，阈值实测标定 | ✅ 通过 | 上面的标定输出 + `LSM_LOG_BOUND=4194304` |
+| file 引擎不退化（对照） | ✅ 通过 | `raft_fault --repeat 50`（file）+ `raft_snapshot_fault --repeat 1`（file）均 PASS |
+| 默认 `--repeat 50` 在 lsm 下的 `raft_snapshot_fault` | ⏳ 未完成 | 见未验证清单（100k 段在 lsm 下太慢，超时风险；已排队后台跑，结果未取到） |
+
+### 偏差登记（M6.6）
+
+| ID | 设计写的 | 落地 | 裁决 |
+|---|---|---|---|
+| **M6.6-D1** | §4-M6.6 的证据命令用 `RAFTKV_LOG_ENGINE=lsm bash scripts/...` | 改用 `--log-engine lsm`（M6.5-D1：本机→VM 通道上前缀赋值不可靠） | 同一判据、更可验证的通道 |
+| **M6.6-D2** | C6「`LOG_BOUND` 判据按引擎取数据目录字节」 vs D9「file 引擎的 1 MiB 判据保持原样」 | 两条同时满足：**每个引擎取自己日志存储的字节面** —— file = `raft/raft.log`（既有 1 MiB），lsm = `raft-lsm/` 目录总字节（标定 4 MiB）；脚本对每个节点**同时打印** `raft/`（含 snapshot.dat）与 `raft-lsm/` 的字节数 | file 侧口径不变（避免历史门禁漂移）；lsm 侧用目录字节（它的持久化面是多文件） |
+| **M6.6-D3** | 资源纪律：重活串行 | 标定与门禁运行的窗口里，lsm 侧同时在跑 ASan/TSan 构建与 `lsm_tests`（loadavg 峰值 15.9） | 如实登记。**功能门禁不受影响**；耗时数字只作定性参考，**未**用于任何比值结论（M6.7 会在空闲窗口重测） |
+
+### 未做 / 未验证（M6.6 时点）
+
+1. **未完成**：`raft_snapshot_fault.sh --log-engine lsm --repeat 50` —— 100k 段的 lsm 侧耗时约 13 分钟（且与别的重活并发），在本轮时间盒内未跑完；已放在后台队列，若最终未取到结果则本项判据**按未验证处理**（不得写成通过）。
+2. **未验证**：`raft_snapshot_fault.sh` 在 lsm 下的 `LOG_BOUND` 是否在 **--repeat 50** 的长期运行中仍成立（重复的 kill -9/快照可能让 WAL/SST 累积更多）。
+3. **未验证**：`--strace` 的 fsync 次数（D5/R1 的判定数字）—— 在 M6.7 采集。
+4. **未验证**：file 引擎侧 `raft/` 目录字节（含 snapshot.dat ≈1.5 MB）的长期上界（既有脚本历史上只约束 raft.log）。

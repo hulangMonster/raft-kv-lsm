@@ -12,7 +12,22 @@ BIN="$ROOT/build/bin"
 WORK="$(mktemp -d)"
 
 REPEAT=50
-if [[ "${1:-}" == "--repeat" ]]; then REPEAT="${2:-50}"; fi
+# M6.6（C6/D9）：日志引擎 = file|lsm，默认 file。选择顺序：--log-engine 参数 > RAFTK_LOG_ENGINE > file。
+# 见 docs/m6-evidence.md §M6.5-D1：本机→VM 通道上 `VAR=value cmd` 前缀赋值不可靠，故 CLI 参数为权威通道。
+LOG_ENGINE="${RAFTKV_LOG_ENGINE:-file}"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --log-engine=*) LOG_ENGINE="${1#*=}"; shift;;
+    --log-engine)   LOG_ENGINE="${2:-}"; shift 2;;
+    --repeat)       REPEAT="${2:-50}"; shift 2;;
+    *) echo "unknown argument: $1" >&2; exit 2;;
+  esac
+done
+if [[ "$LOG_ENGINE" != "file" && "$LOG_ENGINE" != "lsm" ]]; then
+  echo "unknown --log-engine: $LOG_ENGINE (expected file|lsm)" >&2
+  exit 2
+fi
+echo "engine=$LOG_ENGINE" >&2
 
 BASE=$((19000 + ($$ % 600)))
 PORT1=$BASE
@@ -20,7 +35,16 @@ PORT2=$((BASE + 1))
 PORT3=$((BASE + 2))
 PEERS="1=127.0.0.1:$PORT1,2=127.0.0.1:$PORT2,3=127.0.0.1:$PORT3"
 THRESHOLD=2000
-LOG_BOUND=1048576  # 1 MiB: ~2000 small entries fit well under this
+# M6.6（C6/D9）：LOG_BOUND 必须**按引擎**取口径，且阈值是**实测标定**的（不是文件大小的猜测）：
+#   file：<data-dir>/raft/raft.log 的字节数 <= 1 MiB —— M2-M5 的既有判据，保持不变
+#   lsm ：<data-dir>/raft-lsm **目录总字节** <= LSM_LOG_BOUND —— lsm 引擎下根本没有 raft.log；
+#         用目录字节是因为其持久化面是 WAL + MANIFEST + SST 等多个文件
+# 标定过程与实测数字见 docs/m6-evidence.md §M6.6；RAFTKV_LOG_BOUND 可覆盖以复标定。
+LOG_BOUND=1048576
+# 标定值（实测，2026-10 M6.6，3 节点 × 100k 条 + 快照）：raft-lsm 目录字节
+#   实测 node1=2561634 / node2=2579679 / node3=2223606 B（最大 2579679 B）⇒ 取 4 MiB
+#   （= 实测最大值的 ~1.6× 余量）。对照：file 引擎的 raft.log 判据仍是 1 MiB。
+LSM_LOG_BOUND="${RAFTKV_LOG_BOUND:-4194304}"
 
 PIDS=()
 cleanup() {
@@ -41,8 +65,10 @@ node_port() {
 
 start_node() {
   local id=$1
+  RAFTK_LOG_ENGINE="$LOG_ENGINE" \
   "$BIN/raftkv_raft_node" --id "$id" --port "$(node_port "$id")" \
     --peers "$PEERS" --data-dir "$WORK/node$id" --snapshot-threshold "$THRESHOLD" \
+    --log-engine "$LOG_ENGINE" \
     >"$WORK/node$id.log" 2>&1 &
   PIDS[$id]=$!
 }
@@ -113,12 +139,22 @@ LEADER="$(require_leader)"
 for id in 1 2 3; do
   wait_field_at_least "$id" last_applied 100000 || {
     echo "FAIL: node$id did not apply 100k entries" >&2; exit 1; }
-  sz=$(stat -c%s "$WORK/node$id/raft/raft.log" 2>/dev/null || echo 0)
-  if (( sz > LOG_BOUND )); then
-    echo "FAIL: node$id raft.log=$sz exceeds $LOG_BOUND (not bounded)" >&2; exit 1
+  if [[ "$LOG_ENGINE" == "lsm" ]]; then
+    LEAF="raft-lsm"; BOUND="$LSM_LOG_BOUND"
+    sz=$(du -sb "$WORK/node$id/$LEAF" 2>/dev/null | cut -f1 || true)
+  else
+    LEAF="raft/raft.log"; BOUND="$LOG_BOUND"
+    sz=$(stat -c%s "$WORK/node$id/$LEAF" 2>/dev/null || echo 0)
+  fi
+  sz=${sz:-0}
+  raftdir=$(du -sb "$WORK/node$id/raft" 2>/dev/null | cut -f1 || true); raftdir=${raftdir:-0}
+  lsmdir=$(du -sb "$WORK/node$id/raft-lsm" 2>/dev/null | cut -f1 || true); lsmdir=${lsmdir:-0}
+  echo "  node$id $LEAF=$sz bytes (bound=$BOUND; raft/=$raftdir raft-lsm/=$lsmdir)"
+  if (( sz > BOUND )); then
+    echo "FAIL: node$id $LEAF=$sz exceeds $BOUND (not bounded)" >&2; exit 1
   fi
 done
-echo "A) 100000 entries applied, raft.log bounded (<= ${LOG_BOUND}B)"
+echo "A) 100000 entries applied, log bounded (engine=$LOG_ENGINE, bound=$BOUND, bytes=$sz)"
 
 # ---- B) empty node catches up via InstallSnapshot ---------------------------
 LEADER="$(require_leader)"

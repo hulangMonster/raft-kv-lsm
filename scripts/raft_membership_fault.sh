@@ -13,7 +13,22 @@ BIN="$ROOT/build/bin"
 WORK="$(mktemp -d)"
 
 REPEAT=50
-if [[ "${1:-}" == "--repeat" ]]; then REPEAT="${2:-50}"; fi
+# M6.6（C6/D9）：日志引擎 = file|lsm，默认 file。选择顺序：--log-engine 参数 > RAFTK_LOG_ENGINE > file。
+# 见 docs/m6-evidence.md §M6.5-D1：本机→VM 通道上 `VAR=value cmd` 前缀赋值不可靠，故 CLI 参数为权威通道。
+LOG_ENGINE="${RAFTKV_LOG_ENGINE:-file}"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --log-engine=*) LOG_ENGINE="${1#*=}"; shift;;
+    --log-engine)   LOG_ENGINE="${2:-}"; shift 2;;
+    --repeat)       REPEAT="${2:-50}"; shift 2;;
+    *) echo "unknown argument: $1" >&2; exit 2;;
+  esac
+done
+if [[ "$LOG_ENGINE" != "file" && "$LOG_ENGINE" != "lsm" ]]; then
+  echo "unknown --log-engine: $LOG_ENGINE (expected file|lsm)" >&2
+  exit 2
+fi
+echo "engine=$LOG_ENGINE" >&2
 
 BASE=$((19000 + ($$ % 500)))
 declare -a PORT
@@ -31,8 +46,10 @@ cleanup() {
 trap cleanup EXIT
 
 start_node() { # <id> <peers>
+  RAFTK_LOG_ENGINE="$LOG_ENGINE" \
   "$BIN/raftkv_raft_node" --id "$1" --port "${PORT[$1]}" \
     --peers "$2" --data-dir "$WORK/node$1" --snapshot-threshold 1000 \
+    --log-engine "$LOG_ENGINE" \
     >"$WORK/node$1.log" 2>&1 &
   PIDS[$1]=$!
 }
