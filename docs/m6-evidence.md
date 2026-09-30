@@ -748,3 +748,17 @@ $ setarch $(uname -m) -R ./build-tsan/bin/raftkv_raft_tests --gtest_filter='LsmL
 ```
 
 （两者都用 pin 的 lsm 基座 `b1bd050` 一起编译，因此 lsm 侧代码也在 sanitizer 覆盖内。）
+
+---
+
+## M6 收尾状态（供父代理接手的两条硬事实）
+
+1. **A/B 所用的 lsm 基座是 `b1bd050`（pin 在 `/tmp/lsm-pin-b1bd050`）**。父代理裁决 #1 要求
+   「R1 落地后要在**最终 lsm 提交**上重跑 A/B」—— 收尾时点复查：`~/lsm-kv` 的 HEAD **仍是 `b1bd050`**，
+   R1 修复仍在**未提交的工作区**里（`git status --short` 显示 `M src/db_impl.cpp/h`、`M src/wal.cpp/h`、
+   `?? tests/sync_isolation_test.cpp`、`?? tests/env_slow_sync.h`）。
+   ⇒ **M6.7 的 A/B 必须在 R1 提交落地后重跑**（`scripts/bench_m6_ab.sh` 已就绪：换 pin 目录、
+   `-DRAFTKV_LSM_DIR=<新 pin>` 重建即可），并把新数字替换 `docs/m6-bench.md` §2/§3 的对应行。
+   本轮**没有**触碰 `~/lsm-kv`（只读）。
+2. **最终 HEAD 的单测门禁**：`./build/bin/raftkv_raft_tests` = **121/121 PASSED**（47713 ms），
+   `git status --short` 空，全部提交已 `push origin main`（未打 tag —— tag 由父代理打）。
