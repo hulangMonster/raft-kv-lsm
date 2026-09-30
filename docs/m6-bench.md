@@ -94,8 +94,8 @@ lsm  p=8 rep=1 n=500 ms=14750.7 ms_per_write=29.501  qps=34 verify=[verified 500
 | H8 `verify` 含 `missing 0` | ✅ 9/9 格 | ✅ 9/9 格 | ✅ 9/9 格 | §2 的 27 行（另见作废的 strace 轮） |
 | H9 `base` 臂不退化 | ✅ 基准 | ✅ ±2% 内 | — | §3 的 base/file 两列；**H2–H7 的 base 臂未跑**（见 §7） |
 | H10 无多数派时写不返回 OK | 内嵌于 H2/H5/H6 | 同左 | 同左 | 脚本内既有断言；三臂的 PASS 即该断言通过 |
-| H11 ASan 构建下 H1 无报告 | — | ⛔ **未做** | ⛔ **未做** | 见 §7（本轮未建 `build-asan`） |
-| H12 TSan 构建下 `LsmLogStore` 无报告 | — | — | ⛔ **未做** | 见 §7 |
+| H11 ASan 构建下 H1 无报告 | — | ✅ **通过** | ✅ **通过** | `cmake -B build-asan -DENABLE_ASAN=ON`（0 warning）⇒ `[  PASSED  ] 121 tests.`（50991 ms），无 ASan 报告 |
+| H12 TSan 构建下 `LsmLogStore` 无报告 | — | — | ✅ **通过** | `cmake -B build-tsan -DENABLE_TSAN=ON`（0 warning）+ `setarch x86_64 -R` ⇒ `LsmLogStore.*` **20/20 PASSED**（2008 ms），无 TSan 报告 |
 
 ## 5. 观测 O1–O8 / D1–D10 的数字
 
@@ -147,17 +147,17 @@ lsm  p=8 rep=1 n=500 ms=14750.7 ms_per_write=29.501  qps=34 verify=[verified 500
 
 ## 7. 未验证清单（每条一行 + 原因）
 
-1. **H11（ASan）**：本轮未建 `build-asan` 跑 H1 —— 时间盒用尽；`~/lsm-kv` 侧的 ASan 构建与本仓无关。
-2. **H12（TSan）**：同上，未建 `build-tsan`。
-3. **H9 的 base 臂脚本门禁（H2–H7 用 `~/raft-kv/scripts/*.sh` 跑）**：只跑了 A/B 的 base 臂（27 格全 `missing 0`），没跑 base 的 e2e/fault 脚本。
-4. **`raft_snapshot_fault.sh --log-engine lsm --repeat 50`**：100k 段在 lsm 下 ~13 分钟（并发重活下），本轮未跑完；`--repeat 1` 已 PASS。
-5. **P99 / max 延迟（D2）**：node 侧直方图未实现。
-6. **fsync 次数/耗时（D5/R1）**：`strace` 通道无效。
-7. **lsm 内部统计（O5/O6/O7、D7）**：`GetLevelStats/GetAmplificationStats/GetFlushStats` 未接线到 node。
-8. **100k 条后的启动恢复耗时（D4）**：未采集。
-9. **正式口径的 n（设计 §5.5 的 5000/20000/20000）**：本轮用 1000/4000/4000（受时间盒与 lsm 侧写吞吐限制）；每行的 `n=` 都如实打印。
-10. **`slice()` / `truncateSuffix` 的定向性能（R2/R3）**：只有功能证据，没有性能数字。
-11. **A/B 期间的机器安静度**：正式 27 格期间 loadavg 4.7–5.4（VM 上有另一 agent 的重活窗口）。**这会影响绝对 qps，但三臂同轮交替把相对比较的偏置压到最小**；仍属于已知限制。
+1. **H9 的 base 臂脚本门禁（用 `~/raft-kv/scripts/*.sh` 跑 H2–H7）**：只跑了 A/B 的 base 臂（27 格全 `missing 0`），没跑 base 的 e2e/fault 脚本。
+2. **`raft_snapshot_fault.sh --log-engine lsm --repeat 50`**：100k 段在 lsm 下 ~13 分钟（并发重活下），本轮未跑完；`--repeat 1` 已 PASS。
+3. **P99 / max 延迟（D2）**：node 侧直方图未实现（设计 D12）。
+4. **fsync 次数/耗时（D5/R1）**：`strace -f -c` 通道实测无效（连 base 臂都 verify 失败），无可信数字。
+5. **lsm 内部统计（O5/O6/O7、D7）**：`GetLevelStats`/`GetAmplificationStats`/`GetFlushStats` 未接线到 node。
+6. **100k 条后的启动恢复耗时（D4）**：未按口径采集（只有空库启动 133–175 ms）。
+7. **正式口径的 n（设计 §5.5 的 5000/20000/20000）**：本轮用 1000/4000/4000（时间盒 + lsm 写吞吐限制）；每行都打印 `n=`。
+8. **`slice()` / `truncateSuffix` 的定向性能（R2/R3）**：只有功能证据，没有性能数字。
+9. **A/B 期间的机器安静度**：27 格期间 loadavg 4.7–5.4（VM 上有另一 agent 的重活窗口）；三臂同轮交替把相对比较的偏置压到最小，但仍属已知限制。
+10. **H11/H12 的口径**：H11 是 ASan **全量**（121/121）；H12 是 TSan 的 **`LsmLogStore.*`**（20/20）——**不是** TSan 全量（M6.8 时间盒内未跑 TSan 全量）。
+11. **base 臂的 ASan/TSan**：未做（只在 `~/raft-kv-lsm` 上跑）。
 
 ## 8. 结论
 
@@ -170,3 +170,4 @@ lsm  p=8 rep=1 n=500 ms=14750.7 ms_per_write=29.501  qps=34 verify=[verified 500
 * **空间**：小负载 ≈1.5×；100k + 频繁快照 ≈50×（R4 确认）。
 * **说得更谨慎一点**：本结论只覆盖「单机 3 节点、n≤4000、无 P99、无 fsync 计数」的口径；
   高并发大负载 + 无重活干扰下的数字**未验证**。
+* **并发正确性门禁已收口**：ASan 全量 121/121、TSan 的 `LsmLogStore.*` 20/20，均 0 warning、0 报告（H11/H12）。

@@ -727,5 +727,24 @@ raft_snapshot_fault: PASS                              # H6（file 臂不退化�
 
 ### 未做 / 未验证（M6.7 时点）
 
-见 `docs/m6-bench.md` §7 的 11 条（H11/H12 未做、base 臂脚本门禁未跑、`snapshot_fault --repeat 50` 未跑完、
-P99 未采集、D5 通道无效、lsm 内部统计未接线、D4 口径未采集、正式 n 未达、R2/R3 无定向性能数字、机器安静度限制）。
+见 `docs/m6-bench.md` §7 的 11 条（base 臂脚本门禁未跑、`snapshot_fault --repeat 50` 未跑完、
+P99 未采集、D5 通道无效、lsm 内部统计未接线、D4 口径未采集、正式 n 未达、R2/R3 无定向性能数字、
+机器安静度限制、TSan 未跑全量、base 臂未跑 sanitizer）。
+
+**H11/H12 已在 M6.8 收口**：
+
+```bash
+$ cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_ASAN=ON -DRAFTKV_LSM_DIR=/tmp/lsm-pin-b1bd050
+$ cmake --build build-asan -j8            # 0 warning
+$ ./build-asan/bin/raftkv_raft_tests
+[==========] 121 tests from 18 test suites ran. (50991 ms total)
+[  PASSED  ] 121 tests.                    # H11：无 ASan 报告
+
+$ cmake -S . -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_TSAN=ON -DRAFTKV_LSM_DIR=/tmp/lsm-pin-b1bd050
+$ cmake --build build-tsan -j8            # 0 warning
+$ setarch $(uname -m) -R ./build-tsan/bin/raftkv_raft_tests --gtest_filter='LsmLogStore.*'
+[==========] 20 tests from 1 test suite ran. (2008 ms total)
+[  PASSED  ] 20 tests.                     # H12：无 TSan 报告
+```
+
+（两者都用 pin 的 lsm 基座 `b1bd050` 一起编译，因此 lsm 侧代码也在 sanitizer 覆盖内。）
