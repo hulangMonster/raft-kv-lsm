@@ -152,7 +152,7 @@ lsm p=64 rep=3 n=4000 ms=10479.0 ms_per_write=2.620 qps=382 verify=[verified 400
 | H3 `raft_snapshot_e2e.sh` | ⛔ 未跑 | ✅ `raft_snapshot_e2e: PASS` | ✅ `raft_snapshot_e2e: PASS` | evidence §M6.5 |
 | H4 `raft_membership_e2e.sh` | ⛔ 未跑 | ✅ PASS（exit 0） | ✅ PASS（exit 0） | evidence §M6.5（verify 内部断言 `missing 0`） |
 | H5 `raft_fault.sh --repeat 50` | ⛔ 未跑 | ✅ `raft_fault: PASS (50 iterations)` | ✅ `raft_fault: PASS (50 iterations)` | evidence §M6.6 |
-| H6 `raft_snapshot_fault.sh` | ⛔ 未跑 | ✅ PASS（`--repeat 1`，A/B/C 全过） | ✅ PASS（`--repeat 1`）；`--repeat 50` **未跑完** | evidence §M6.6 |
+| H6 `raft_snapshot_fault.sh` | ⛔ 未跑 | ✅ PASS（`--repeat 1`，A/B/C 全过） | ⛔ **FAIL（红，f06a44d）** | 基座 f06a44d + `--repeat 50`：A 段空间判据 `node1 raft-lsm=4450355 exceeds 4194304 (not bounded)` ⇒ **exit 1**；原始输出见 §7.1 |
 | H7 `raft_membership_fault.sh --repeat 50` | ⛔ 未跑 | ⛔ 未跑（file 臂本步未重复） | ✅ `raft_membership_fault: PASS (50 iterations)` | evidence §M6.6 |
 | H8 `verify` 含 `missing 0` | ✅ 9/9 格 | ✅ 9/9 格 | ✅ 9/9 格 | §2 的 27 行（另见作废的 strace 轮） |
 | H9 `base` 臂不退化 | ✅ 基准 | ✅ ±2% 内 | — | §3 的 base/file 两列；**H2–H7 的 base 臂未跑**（见 §7） |
@@ -162,18 +162,52 @@ lsm p=64 rep=3 n=4000 ms=10479.0 ms_per_write=2.620 qps=382 verify=[verified 400
 
 ## 5. 观测 O1–O8 / D1–D10 的数字
 
+### 5.1 补充轮（基座 f06a44d，`--repeats 1`）：node 侧 fsync 计数 + lsm 引擎内部统计
+
+为了让「lsm 与 file 的差异来自哪」有**同轮数字**，M6.r2 把两类只读观测接了出来：
+`Metrics::statusFragment()`（本就有 `lat_p50_us/lat_p99_us/fsync_calls/fsync_ms`）与
+`LsmLogStore::engineStatsFragment()`（`GetLevelStats`/`GetFlushStats`/`GetAmplificationStats`
+的计数，file 引擎下**不输出**这些字段 —— 不是 0）。原始行（9 格，`--repeats 1`，仅用于采集新列）：
+
+```
+base p=1 rep=1 n=1000 ms=33786.2 ms_per_write=33.786 qps=30 verify=[verified 1000 missing 0] logdir_bytes=193887 open_ms_max=136 fsync_calls=NA fsync_us_total=NA lat_p50_us=50000 lat_p99_us=50000 node_fsync_calls=1202 node_fsync_ms=9390 lsm_stats=[NA]
+file p=1 rep=1 n=1000 ms=35495.1 ms_per_write=35.495 qps=28 verify=[verified 1000 missing 0] logdir_bytes=193887 open_ms_max=143 fsync_calls=NA fsync_us_total=NA lat_p50_us=50000 lat_p99_us=50000 node_fsync_calls=1202 node_fsync_ms=9670 lsm_stats=[NA]
+lsm  p=1 rep=1 n=1000 ms=34389.2 ms_per_write=34.389 qps=29 verify=[verified 1000 missing 0] logdir_bytes=289203 open_ms_max=133 fsync_calls=NA fsync_us_total=NA lat_p50_us=50000 lat_p99_us=50000 node_fsync_calls=1202 node_fsync_ms=9339 lsm_stats=[lsm_l0_files=0 lsm_sst_files=0 lsm_sst_bytes=0 lsm_wal_bytes=92305 lsm_flush_started=0 lsm_flush_done=0 lsm_flush_failed=0 lsm_stall_events=0 lsm_stall_ms=0 lsm_wal_rotations=0 lsm_compaction_rounds=0 lsm_compaction_max_ms=0 lsm_flush_write_bytes=0 lsm_compact_write_bytes=0 lsm_user_bytes=65847]
+base p=8 rep=1 n=4000 ms=21906.1 ms_per_write=5.477 qps=183 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=140 fsync_calls=NA fsync_us_total=NA lat_p50_us=50000 lat_p99_us=50000 node_fsync_calls=781 node_fsync_ms=5509 lsm_stats=[NA]
+file p=8 rep=1 n=4000 ms=23813.3 ms_per_write=5.953 qps=168 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=170 fsync_calls=NA fsync_us_total=NA lat_p50_us=50000 lat_p99_us=50000 node_fsync_calls=787 node_fsync_ms=5926 lsm_stats=[NA]
+lsm  p=8 rep=1 n=4000 ms=21377.0 ms_per_write=5.344 qps=187 verify=[verified 4000 missing 0] logdir_bytes=861997 open_ms_max=152 fsync_calls=NA fsync_us_total=NA lat_p50_us=50000 lat_p99_us=50000 node_fsync_calls=797 node_fsync_ms=5945 lsm_stats=[lsm_l0_files=0 lsm_sst_files=0 lsm_sst_bytes=0 lsm_wal_bytes=326393 lsm_flush_started=0 lsm_flush_done=0 lsm_flush_failed=0 lsm_stall_events=0 lsm_stall_ms=0 lsm_wal_rotations=0 lsm_compaction_rounds=0 lsm_compaction_max_ms=0 lsm_flush_write_bytes=0 lsm_compact_write_bytes=0 lsm_user_bytes=233864]
+base p=64 rep=1 n=4000 ms=11970.8 ms_per_write=2.993 qps=334 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=139 fsync_calls=NA fsync_us_total=NA lat_p50_us=50000 lat_p99_us=50000 node_fsync_calls=305 node_fsync_ms=2537 lsm_stats=[NA]
+file p=64 rep=1 n=4000 ms=11024.1 ms_per_write=2.756 qps=363 verify=[verified 4000 missing 0] logdir_bytes=688887 open_ms_max=150 fsync_calls=NA fsync_us_total=NA lat_p50_us=50000 lat_p99_us=50000 node_fsync_calls=300 node_fsync_ms=2432 lsm_stats=[NA]
+lsm  p=64 rep=1 n=4000 ms=10786.0 ms_per_write=2.696 qps=371 verify=[verified 4000 missing 0] logdir_bytes=843535 open_ms_max=138 fsync_calls=NA fsync_us_total=NA lat_p50_us=50000 lat_p99_us=50000 node_fsync_calls=311 node_fsync_ms=2504 lsm_stats=[lsm_l0_files=0 lsm_sst_files=0 lsm_sst_bytes=0 lsm_wal_bytes=326393 lsm_flush_started=0 lsm_flush_done=0 lsm_flush_failed=0 lsm_stall_events=0 lsm_stall_ms=0 lsm_wal_rotations=0 lsm_compaction_rounds=0 lsm_compaction_max_ms=0 lsm_flush_write_bytes=0 lsm_compact_write_bytes=0 lsm_user_bytes=233864]
+```
+
+**这些数字说明了什么（只陈述计数，不猜）**
+
+| 观察 | 数字（base / file / lsm） | 含义 |
+|---|---|---|
+| node 侧 fsync 次数（p=1，1000 写 + 200 预热） | 1202 / 1202 / **1202** | 三臂**完全相同**（≈1 fsync/写）⇒ 小并发下 lsm 与 file 的 fsync 结构一致；R1 修复后 lsm 不再多刷/被挡 |
+| node 侧 fsync 次数（p=8） | 781 / 787 / **797** | 组提交生效（≈0.19 fsync/写），lsm 只多 1.3% |
+| node 侧 fsync 次数（p=64） | 305 / 300 / **311** | ≈0.074 fsync/写；lsm 多 3.7% —— **比 §3.1（修前）的劣化小得多**，与「lsm 在 p=64 反超 file」一致 |
+| node 侧 fsync 总耗时（p=64） | 2537 / 2432 / **2504** ms | 与次数同量级 ⇒ 单次 fsync 成本三臂相同（≈8 ms） |
+| lsm SST/flush/compaction（n≤4000） | — / — / **sst_files=0, flush_started=0, compaction_rounds=0, stall_events=0** | 这些格子里 lsm 路径 = **纯 WAL append + memtable**，没有 flush/compaction/stall 开销 |
+| lsm WAL 字节 vs 用户字节 | — / — / **92 305 / 65 847**（p=1）、**326 393 / 233 864**（p=8/64） | WAL 写放大 ≈ **1.40×**（每条 entry 的 WAL 帧 ≈ 1.4× 用户 key+value 字节），与 file 引擎的帧开销同量级 |
+| lsm 目录字节 vs lsm 自报 WAL 字节（p=64） | — / — / **843 535（du）** vs **326 393（自报 live WAL）** | 目录里还有 **~517 KB 的未回收字节**（obsolete WAL/元数据尚未删）⇒ 这是 R4（空间放大）在同一轮里的现场证据 |
+| node 侧 `lat_p50_us` / `lat_p99_us` | 50000 / 50000 | ⚠️ **顶桶（≥20 ms）饱和**：现有直方图的桶上界只到 50 ms，本负载下三臂都落在顶桶 ⇒ **不可分辨**，不能用来比较长尾（见 O1/D2 的限制） |
+
+### 5.2 观测项状态（第一轮 → 第二轮）
+
 | ID | 项 | 状态 | 数字 / 原因 |
 |---|---|---|---|
 | O1/D1 | 吞吐 / ms-per-write | ✅ 已采集 | §3 表（p=1/8/64 三档） |
-| O1/D2 | P99 / max 延迟 | ⛔ **未采集** | 设计 D12 的 node 侧直方图**未实现**（本里程碑未改 `status`/`Metrics`）；均值掩盖长尾的风险仍在 |
+| O1/D2 | P99 / max 延迟 | ⚠️ **采集到但不可分辨** | node 侧 `lat_p50_us/lat_p99_us` 已在 status 里（本就有）；但桶上界只到 50 ms，本负载三臂都落顶桶（50000）⇒ 无法比较；**max 仍未采集**。见 §5.1 |
 | O2/D3 | 日志目录字节 | ✅ 已采集（小负载） | §2 的 `logdir_bytes`；大负载见 §6.4 |
 | O3/D4 | 启动恢复耗时（100k 条后重启） | ⚠️ 口径不符 | 只采集了「空库启动到 status 可用」（`open_ms_max` 133–175 ms）；**100k 条后的恢复耗时未按 D4 采集** |
-| O4/D5 | fsync 次数 / 总耗时 | ⛔ **未采集** | `strace -f -c` 通道实测无效（连 base 臂都 verify 失败，见 §2 末）；没有可信数字 |
-| O5 | lsm 各层 files/bytes | ⛔ 未采集 | 需要 node 侧调 `GetLevelStats()`（未接线） |
-| O6 | 空间放大 | ⚠️ 部分 | 用 `du -sb` 间接替代（§3/§6.4）；`GetAmplificationStats()` 未接线 |
-| O7/D6 | 写停顿 `stall_events`/`stall_micros` | ⛔ 未采集 | `GetFlushStats()` 未接线；门禁中未观测到挂起 |
+| O4/D5 | fsync 次数 / 总耗时 | ✅ **已采集（node 侧计数器）** | 走 `strace` 的通道无效（§2.1 末），改用 node 自己的 `fsync_calls/fsync_ms`（`Metrics::onFsync`）：三臂 p=1 都是 1202 次、p=8 781/787/797、p=64 305/300/311（§5.1） |
+| O5 | lsm 各层 files/bytes | ✅ 已接线并采集 | `lsm_l0_files/lsm_sst_files/lsm_sst_bytes` 随 `status` 输出（§5.1）：n≤4000 时全为 0（没有 flush 到 SST） |
+| O6 | 空间放大 | ✅ 已接线并采集（+`du` 交叉验证） | `lsm_wal_bytes/lsm_flush_write_bytes/lsm_compact_write_bytes/lsm_user_bytes`（§5.1）：WAL 写放大 ≈1.40×；`du` 与自报 live WAL 的差额 ≈517 KB ⇒ 未回收字节可见 |
+| O7/D6 | 写停顿 `stall_events`/`stall_micros` | ✅ 已接线并采集 | `lsm_stall_events/lsm_stall_ms`（§5.1）：本负载全为 0 |
 | O8/D8 | WAL 尾部截断字节 | ✅ 已采集（单测） | `LsmLogStore.TornWalTailIsTruncatedByOpenAndCounted`：`walTailTruncatedBytes() > 0`（具体值未打印） |
-| D7 | compaction 轮次/最大耗时 | ⛔ 未采集 | 同上（未接线） |
+| D7 | compaction 轮次/最大耗时 | ✅ 已接线并采集 | `lsm_compaction_rounds/lsm_compaction_max_ms`（§5.1）：n≤4000 全为 0（未触发 compaction） |
 | D9 | `truncateSuffix` 条目数分布 | ⚠️ 部分 | `LsmLogStore::Stats.truncated_entries` 有计数与单测断言（`== 2`）；**分布**未采集 |
 | D10 | `slice()` 调用次数/条数 | ⚠️ 部分 | `Stats.slice_calls` 有计数；**未在 A/B 中导出** |
 
@@ -208,6 +242,32 @@ D5（fsync 次数）仍**没有**可信数字：`strace` 通道无效（§2.1 �
    tombstone，物理回收要等后台 compaction）。
 阈值标定见 `docs/m6-evidence.md` §M6.6（`LSM_LOG_BOUND = 4 MiB`，= 实测最大值的 ~1.6×）。
 
+**补充轮的同轮证据（§5.1，n=4000/p=64）**：`logdir_bytes=843 535` 而 lsm 自报 live WAL 只有
+`lsm_wal_bytes=326 393` ⇒ **约 517 KB 是尚未回收的 obsolete WAL/元数据**。也就是说：
+「目录比 live 数据大」不是统计口径问题，而是**回收滞后**的现场证据。
+
+### 6.4.1 ⛔ 空间判据在 f06a44d 上**红**（不得掩盖）
+
+同一脚本、同一负载（100k 条 + threshold 2000）、同一检查点，两轮基座的实测：
+
+| 基座 | `raft-lsm/` 三节点字节 | 判据（`LSM_LOG_BOUND=4194304`） |
+|---|---|---|
+| b1bd050（标定轮，2026-10-01 05:5x，机器同时有重活） | 2 221 606 / 2 579 679 / 2 561 634 | PASS |
+| **f06a44d（本轮，08:00，机器安静）** | **node1 = 4 450 355**（第一节点即超标 ⇒ 脚本 exit 1） | **FAIL** |
+
+原始输出（`/tmp/m6r2-snapfault-lsm50.log`，去掉 kill 噪音）：
+
+```
+engine=lsm
+  node1 raft-lsm=4450355 bytes (bound=4194304; raft/=1487902 raft-lsm/=4450355)
+FAIL: node1 raft-lsm=4450355 exceeds 4194304 (not bounded)
+```
+
+**处置（未放宽判据）**：`LSM_LOG_BOUND` **保持 4 MiB 不改**，本轮判据按**未通过**登记。
+两种可能的解释都需要 lsm 侧/父代理裁决：(a) f06a44d 的 WAL 轮转/回收时机变了（`RotateLog()` 也在该提交里改过），
+使稳态目录的**未回收字节**变多；(b) 4 MiB 这个上界本来就是在**有重活的机器**上标定的，偏乐观。
+本文件只登记事实与两种解释，不替 lsm 侧下结论；如需重标定，必须用**安静机器 + 多轮**重新取分布后由父代理决定。
+
 ### 6.5 R5 —— 写停顿（`WaitForImmutableCapacity`）→ **未采集**
 `GetFlushStats().stall_events/stall_micros` 未接线；门禁与 A/B 中**未观测到**挂起或超时。
 
@@ -219,7 +279,7 @@ D5（fsync 次数）仍**没有**可信数字：`strace` 通道无效（§2.1 �
 ## 7. 未验证清单（每条一行 + 原因）
 
 1. **H9 的 base 臂脚本门禁（用 `~/raft-kv/scripts/*.sh` 跑 H2–H7）**：只跑了 A/B 的 base 臂（27 格全 `missing 0`），没跑 base 的 e2e/fault 脚本。
-2. **`raft_snapshot_fault.sh --log-engine lsm --repeat 50`**：100k 段在 lsm 下 ~13 分钟（并发重活下），本轮未跑完；`--repeat 1` 已 PASS。
+2. **`raft_snapshot_fault.sh --log-engine lsm --repeat 50`**：在基座 **f06a44d** 上**跑完了，结果是红**——A 段的空间判据超标（`4450355 > 4194304`），exit 1，B/C 段未执行。原始输出与两种解释见 §6.4.1。
 3. **P99 / max 延迟（D2）**：node 侧直方图未实现（设计 D12）。
 4. **fsync 次数/耗时（D5/R1）**：`strace -f -c` 通道实测无效（连 base 臂都 verify 失败），无可信数字。
 5. **lsm 内部统计（O5/O6/O7、D7）**：`GetLevelStats`/`GetAmplificationStats`/`GetFlushStats` 未接线到 node。
@@ -229,6 +289,18 @@ D5（fsync 次数）仍**没有**可信数字：`strace` 通道无效（§2.1 �
 9. **A/B 期间的机器安静度**：27 格期间 loadavg 4.7–5.4（VM 上有另一 agent 的重活窗口）；三臂同轮交替把相对比较的偏置压到最小，但仍属已知限制。
 10. **H11/H12 的口径**：H11 是 ASan **全量**（121/121）；H12 是 TSan 的 **`LsmLogStore.*`**（20/20）——**不是** TSan 全量（M6.8 时间盒内未跑 TSan 全量）。
 11. **base 臂的 ASan/TSan**：未做（只在 `~/raft-kv-lsm` 上跑）。
+12. **基座更换后的门禁重跑**：`f06a44d` 上已重跑全量单测（121/121）与 A/B；e2e/其余 fault 脚本未重跑。
+13. **node 侧 P99 的分辨率**：桶上界只到 50 ms，本负载下三臂都落顶桶 ⇒ 分位数**无法用于比较**；`max` 无计数器。
+
+### 7.1 红项原始输出（不得删改）
+
+```
+$ bash scripts/raft_snapshot_fault.sh --log-engine lsm --repeat 50      # 基座 f06a44d
+engine=lsm
+  node1 raft-lsm=4450355 bytes (bound=4194304; raft/=1487902 raft-lsm/=4450355)
+FAIL: node1 raft-lsm=4450355 exceeds 4194304 (not bounded)
+exit=1
+```
 
 ## 8. 结论
 

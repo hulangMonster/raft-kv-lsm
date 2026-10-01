@@ -779,3 +779,46 @@ $ setarch $(uname -m) -R ./build-tsan/bin/raftkv_raft_tests --gtest_filter='LsmL
 * 该轮还有：全量单测 **121/121 PASSED**（48 296 ms，基座 f06a44d 重建后重跑）、
   `raft_snapshot_fault.sh --log-engine lsm --repeat 50`（结果见本节尾部/后续提交）。
 * 仍未采集：节点侧 P99 分位与 fsync 计数（补充轮）、100k 条后的启动恢复耗时（D4）、正式口径 n。
+
+---
+
+## M6.r2 追加：O5–O7/P99 接线 + `snapshot_fault` 红项 + 门禁状态
+
+### 1) O5–O7 / node 侧 fsync / P99 接线（只读，追加列）
+
+* `src/raft/lsm_log_store.{h,cpp}`：新增 `LsmLogStore::engineStatsFragment()` —— 只用 lsm 的
+  **公开诊断 API**（`GetLevelStats()` / `GetFlushStats()` / `GetAmplificationStats()`）渲染一行 `k=v`；
+  file 引擎 / 未配置 lsm 时返回空串。
+* `src/main_raft_node.cpp`：`g_lsmStore`（`dynamic_cast<LsmLogStore*>`，file 臂为 nullptr）+
+  status 分支里追加该片段 ⇒ **file/base 臂的 status 里不会出现 `lsm_*` 字段**（避免把「没有的观测」读成 0）。
+* `scripts/bench_m6_ab.sh`：行尾**追加** `lat_p50_us/lat_p99_us/node_fsync_calls/node_fsync_ms/lsm_stats=[...]`
+  （前缀列不变；旧的 `--strace` 列保留但默认 NA）。
+* 证据：单节点探针 `status` 里出现 14 个 `lsm_*` 字段；补充轮 9 格原始行见 `docs/m6-bench.md` §5.1。
+* 结论（只陈述计数）：p=1/8/64 的 node 侧 **fsync 次数三臂基本相同**（1202/1202/1202、781/787/797、305/300/311）
+  ⇒ 修后 lsm 与 file 的 fsync 结构一致；n≤4000 时 **sst_files/flush/compaction/stall 全为 0**
+  （纯 WAL+memtable）；WAL 写放大 ≈**1.40×**；`du` 与 lsm 自报 live WAL 差 ≈**517 KB**（未回收字节）。
+* **限制**：node 侧 `lat_p50_us/lat_p99_us` 的桶上界只到 50 ms，本负载三臂都落顶桶（50000）⇒
+  **分位数不可分辨**；`max` 无计数器。D2/R7 仍属「未真正采集」。
+
+### 2) ⛔ 红项：`raft_snapshot_fault.sh --log-engine lsm --repeat 50`（基座 f06a44d）
+
+```
+engine=lsm
+  node1 raft-lsm=4450355 bytes (bound=4194304; raft/=1487902 raft-lsm/=4450355)
+FAIL: node1 raft-lsm=4450355 exceeds 4194304 (not bounded)   # exit 1
+```
+* 同一脚本/负载/检查点的两轮对照：b1bd050 标定轮 = 2 221 606–2 579 679 B（PASS）；
+  **f06a44d = 4 450 355 B（node1 即超标，exit 1）**。
+* **未放宽判据**：`LSM_LOG_BOUND` 保持 4 MiB；本轮按**未通过**登记（`docs/m6-bench.md` §4 H6、§6.4.1、§7.1）。
+* 两种解释需裁决：(a) f06a44d 的 WAL 轮转/回收时机变化（`RotateLog()` 也在该提交里改过）；
+  (b) 4 MiB 上界是在**有重活的机器**上标定的，偏乐观。重标定必须用安静机器多轮取分布后由父代理决定。
+* 因为 A 段在 B/C 之前失败，**B/C 段（真正的故障注入判据）未执行** —— 这是该红项的连带影响，如实登记。
+
+### 3) 基座更换后的门禁状态
+
+| 项 | b1bd050 | f06a44d |
+|---|---|---|
+| 全量单测 | 121/121 PASSED | **121/121 PASSED**（48 507 ms，wiring 构建后重跑；编译 0 warning） |
+| A/B（27 格） | §2.1/§3.1 | **§2.2/§3.2**（27 格全 `missing 0`） |
+| `snapshot_fault --repeat 50`（lsm） | 未跑完（§M6.6） | **FAIL（红，见上）** |
+| e2e / 其余 fault 脚本 | file+lsm 均 PASS（§M6.5/§M6.6） | ⛔ 未重跑（时间盒），登记为未做 |

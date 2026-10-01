@@ -46,6 +46,9 @@ std::atomic<int> g_connClientId{1};
 // 在 Reactor 落地（M5.3）之前先加硬上限：超限直接关连接，绝不让线程数失控。
 std::atomic<int> g_activeConns{0};
 constexpr int kMaxConns = 256;
+// M6.r2（设计 §5.2 的 O5/O6/O7）：lsm 引擎只读统计的来源。file 引擎下保持 nullptr
+// ⇒ status 里**不会**出现任何 lsm_* 字段（避免把「没有的观测」误读成 0）。
+const LsmLogStore* g_lsmStore = nullptr;
 
 void onSignal(int /*sig*/) { g_running = false; }
 
@@ -165,6 +168,10 @@ void serveConnection(int fd, RaftNode& node, Metrics& metrics,
       }
       ss << " members=" << members.str();
       ss << " " << metrics.statusFragment();  // M5.1: 指标（只读）
+      if (g_lsmStore != nullptr) {            // M6.r2: O5/O6/O7（只读）
+        const std::string lsmStats = g_lsmStore->engineStatsFragment();
+        if (!lsmStats.empty()) ss << " " << lsmStats;
+      }
       ClientReply r;
       r.status = ClientStatus::kOk;
       r.value = ss.str();
@@ -400,6 +407,8 @@ int main(int argc, char** argv) {
     }
     std::cerr << "[raftkv-node] log-engine=" << logEngine << std::endl;
     LogStore& log = *logStore;
+    // M6.r2：lsm 臂才接统计（只读；不进任何判定路径）。
+    g_lsmStore = dynamic_cast<LsmLogStore*>(logStore.get());
     FileSnapshotStore snapshots(dataDir);  // M3.4: durable snapshots
     KvStateMachine sm;
     SteadyClock clock;

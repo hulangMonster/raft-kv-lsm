@@ -86,6 +86,13 @@ class LsmLogStore : public LogStore {
   Stats stats() const;
   uint64_t walTailTruncatedBytes() const;
 
+  // M6.r2（设计 §5.2 的 O5/O6/O7）：lsm 引擎内部的**只读**统计，拼成一行 `k=v ...`，
+  // 由 node 的 `status` 原样输出（file 引擎 / 未配置 lsm 时返回空串）。
+  // 口径：LevelStats（各层文件数/字节）、FlushStats（flush/stall/WAL 轮转）、
+  //       AmplificationStats（flush/compaction 写字节、compaction 轮次与最大耗时）。
+  // 只做计数上报，不参与任何判定（与 Metrics 同纪律）。
+  std::string engineStatsFragment() const;
+
  private:
   // 调用方必须持 mu_（**不得**在持锁时调用公共访问器：它们是 non-recursive mutex）。
   Index firstIndexLocked() const { return lastIncluded_ + 1; }

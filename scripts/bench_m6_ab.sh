@@ -9,6 +9,10 @@
 #   * **不设比值硬门禁**（M6 是适配不是提速；D13）
 # 行格式（前缀列冻结，只允许行尾追加）：
 #   eng=.. p=.. rep=.. n=.. ms=.. ms_per_write=.. qps=.. verify=[..] logdir_bytes=.. open_ms_max=.. fsync_calls=.. fsync_us_total=..
+#   M6.r2 追加列：lat_p50_us=.. lat_p99_us=.. node_fsync_calls=.. node_fsync_ms=.. lsm_stats=[..]
+#     * lat_p50_us/lat_p99_us/node_fsync_calls/node_fsync_ms 来自 **node 侧** metrics（同一轮同一次 fill 之后采样）；
+#     * lsm_stats 只在 lsm 臂出现（file/base 臂为 NA —— 不是 0）；
+#     * 旧的 fsync_calls/fsync_us_total 仍是 --strace 通道（实测污染系统，默认 NA）。
 # 用法: scripts/bench_m6_ab.sh [--quick] [--repeats N] [--pipelines "1 8 64"] [--strace] [--only base,file,lsm]
 set -uo pipefail
 
@@ -148,7 +152,16 @@ probe() { # <eng> <pipeline> <rep>
     ldb=$(( ldb + ${v:-0} ))
   done
 
-  # D5：leader 的 fsync 次数 / 总耗时（仅 --strace；需要 -f -c 的聚合输出）。
+  # D5 / D2 / O5-O7：leader 的 node 侧指标（M5.1 的 statusFragment 已有 p50/p99/fsync 计数；
+  # lsm 臂还会带 lsm_* 引擎统计）。**同一轮**采集，与上面的 ms/qps 是同一次 fill 的结果。
+  local st p50 p99 nfc nfms lsmstats
+  st=$($cli --port "$leaderport" status | tail -1)
+  tok() { printf '%s\n' "$st" | tr ' ' '\n' | sed -n "s/^$1=//p" | head -1; }
+  p50=$(tok lat_p50_us); p99=$(tok lat_p99_us)
+  nfc=$(tok fsync_calls); nfms=$(tok fsync_ms)
+  lsmstats=$(printf '%s\n' "$st" | tr ' ' '\n' | sed -n 's/^\(lsm_[a-z0-9_]*=.*\)$/\1/p' | tr '\n' ' ')
+
+  # D5（备选通道）：仅 --strace 时的进程级 fsync 聚合（实测该通道会污染系统，默认关闭）。
   local fc="NA" fu="NA"
   if [[ $STRACE == 1 ]]; then
     local lid=$(( leaderport - base + 1 ))
@@ -158,7 +171,7 @@ probe() { # <eng> <pipeline> <rep>
     fi
   fi
 
-  echo "$eng p=$p rep=$rep n=$n ms=$ms ms_per_write=$lat qps=$qps verify=[$verify] logdir_bytes=$ldb open_ms_max=$openmax fsync_calls=$fc fsync_us_total=$fu" | tee -a "$RAW"
+  echo "$eng p=$p rep=$rep n=$n ms=$ms ms_per_write=$lat qps=$qps verify=[$verify] logdir_bytes=$ldb open_ms_max=$openmax fsync_calls=$fc fsync_us_total=$fu lat_p50_us=${p50:-NA} lat_p99_us=${p99:-NA} node_fsync_calls=${nfc:-NA} node_fsync_ms=${nfms:-NA} lsm_stats=[${lsmstats:-NA}]" | tee -a "$RAW"
   for pid in "${pids[@]}"; do kill -9 "$pid" 2>/dev/null || true; done
   sleep 0.5
   [[ "$verify" == *"missing 0"* ]] || { echo "VERIFY_FAILED $eng p=$p" >&2; return 1; }

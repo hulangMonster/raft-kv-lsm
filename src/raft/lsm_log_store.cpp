@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <filesystem>
 #include <limits>
 #include <stdexcept>
@@ -654,6 +655,48 @@ LsmLogStore::Stats LsmLogStore::stats() const {
 
 uint64_t LsmLogStore::walTailTruncatedBytes() const {
   return stat_wal_tail_truncated_bytes_.load();
+}
+
+// M6.r2（O5/O6/O7）：把 lsm 引擎的内部计数渲染成一行 k=v，供 node 的 status 原样输出。
+// 只用 lsm 的**公开诊断 API**（GetLevelStats/GetFlushStats/GetAmplificationStats），
+// 不读内部字段、不做任何猜测：每个数字都是引擎自己维护的计数。
+std::string LsmLogStore::engineStatsFragment() const {
+#ifndef RAFTK_HAVE_LSM
+  return {};
+#else
+  std::lock_guard<std::mutex> lk(mu_);
+  auto* p = dynamic_cast<lsm::PersistentDBImpl*>(db_.get());
+  if (p == nullptr) return {};
+  const lsm::LevelStats lv = p->GetLevelStats();
+  const lsm::FlushStats fl = p->GetFlushStats();
+  const lsm::AmplificationStats am = p->GetAmplificationStats();
+  uint64_t sst_files = 0;
+  uint64_t sst_bytes = 0;
+  for (int i = 0; i < lsm::kNumLevels; ++i) {
+    sst_files += lv.files[i];
+    sst_bytes += lv.bytes[i];
+  }
+  char buf[768];
+  std::snprintf(
+      buf, sizeof(buf),
+      "lsm_l0_files=%llu lsm_sst_files=%llu lsm_sst_bytes=%llu lsm_wal_bytes=%llu "
+      "lsm_flush_started=%llu lsm_flush_done=%llu lsm_flush_failed=%llu "
+      "lsm_stall_events=%llu lsm_stall_ms=%llu lsm_wal_rotations=%llu "
+      "lsm_compaction_rounds=%llu lsm_compaction_max_ms=%llu "
+      "lsm_flush_write_bytes=%llu lsm_compact_write_bytes=%llu lsm_user_bytes=%llu",
+      (unsigned long long)lv.files[0], (unsigned long long)sst_files,
+      (unsigned long long)sst_bytes, (unsigned long long)am.log_bytes,
+      (unsigned long long)fl.flushes_started, (unsigned long long)fl.flushes_completed,
+      (unsigned long long)fl.flushes_failed, (unsigned long long)fl.stall_events,
+      (unsigned long long)(fl.stall_micros / 1000ULL),
+      (unsigned long long)fl.rotations,
+      (unsigned long long)am.compaction_rounds,
+      (unsigned long long)(am.compaction_round_max_us / 1000ULL),
+      (unsigned long long)am.flush_write_bytes,
+      (unsigned long long)am.compact_write_bytes,
+      (unsigned long long)am.user_logical_bytes);
+  return std::string(buf);
+#endif
 }
 
 }  // namespace raftkv::raft
