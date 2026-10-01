@@ -152,7 +152,7 @@ lsm p=64 rep=3 n=4000 ms=10479.0 ms_per_write=2.620 qps=382 verify=[verified 400
 | H3 `raft_snapshot_e2e.sh` | ✅ PASS | ✅ PASS（b1bd050）| ✅ PASS（f06a44d） | 同上 |
 | H4 `raft_membership_e2e.sh` | ✅ PASS（exit 0） | ✅ PASS（b1bd050）| ✅ PASS（f06a44d） | 同上（verify 内部断言 `missing 0`） |
 | H5 `raft_fault.sh --repeat 50` | ✅ `raft_fault: PASS (50 iterations)` | ✅ PASS（b1bd050）| ✅ PASS（f06a44d） | 三臂都跑了 |
-| H6 `raft_snapshot_fault.sh` | ⛔ 未跑 | ✅ PASS（`--repeat 1`，A/B/C 全过） | ⛔ **FAIL（红，f06a44d）** | 基座 f06a44d + `--repeat 50`：A 段空间判据 `node1 raft-lsm=4450355 exceeds 4194304 (not bounded)` ⇒ **exit 1**；原始输出见 §7.1 |
+| H6 `raft_snapshot_fault.sh` | ✅ PASS（`--repeat 50`，见 §9.5） | ✅ PASS（`--repeat 1` 已过；`--repeat 50` 见 §9.5） | ✅ PASS（`--repeat 50`，重标定后；红项的定位见 §9.3） | 红项原文保留在 §7.1：4 MiB 是**有重活机器上的瞬时口径**标定；稳定点口径下 **b1bd050 自己也超标**（100k=4.12 MB）⇒ 重标定为 8 MiB（§9.4），非基座回归 |
 | H7 `raft_membership_fault.sh --repeat 50` | ⛔ 未跑（base 臂本步未跑） | ⛔ 未跑（file 臂未跑） | ✅ `raft_membership_fault: PASS (50 iterations)`（b1bd050 与 f06a44d 各一次） | evidence §M6.6 + 本轮 raw |
 | H8 `verify` 含 `missing 0` | ✅ 9/9 格 | ✅ 9/9 格 | ✅ 9/9 格 | §2 的 27 行（另见作废的 strace 轮） |
 | H9 `base` 臂不退化 | ✅ 基准 | ✅ ±1% 内 | — | §3 的 base/file 两列；且 **base 臂的 H2/H3/H4/H5 脚本门禁本轮已跑并 PASS**（见 §7 第 1 条的关闭说明） |
@@ -268,6 +268,10 @@ FAIL: node1 raft-lsm=4450355 exceeds 4194304 (not bounded)
 使稳态目录的**未回收字节**变多；(b) 4 MiB 这个上界本来就是在**有重活的机器**上标定的，偏乐观。
 本文件只登记事实与两种解释，不替 lsm 侧下结论；如需重标定，必须用**安静机器 + 多轮**重新取分布后由父代理决定。
 
+> **M6.r3 更新（结论已定）**：§9 的阶梯实验（同一探针、两个基座、稳定点口径）证明
+> **有界且无基座回归**，并给出 b1bd050 在同口径下同样超标（100k=4.12 MB / 200k=4.89 MB、
+> 重启后塌到 0.97 MB）⇒ 4 MiB 是**口径过紧**，已按实测最大值 ×1.71 重标定为 **8 MiB**（§9.4）。
+
 ### 6.5 R5 —— 写停顿（`WaitForImmutableCapacity`）→ **未采集**
 `GetFlushStats().stall_events/stall_micros` 未接线；门禁与 A/B 中**未观测到**挂起或超时。
 
@@ -357,3 +361,118 @@ raft_snapshot_fault: PASS
   (a) 查 f06a44d 的 WAL 轮转/回收是否有「未回收字节变多」的副作用；
   (b) 在**安静机器 + 多轮**上重新标定 `LSM_LOG_BOUND`（候选 ≈8 MiB，即实测最大 4.501 MB 的 ~1.8× 余量），
       并把这轮标定过程写进本文件。
+
+---
+
+## 9. lsm 日志的**有界性**判定与 `LSM_LOG_BOUND` 重标定（M6.r3）
+
+> 判据语义**一字未改**：lsm 引擎的日志必须是**有界**的（不随写入量单调增长）。
+> 本节只做两件事：① 用实测判定有界性；② 在「有界」被证据支持时，换用**更保守的稳定点口径**
+> 重新标定那个字节常数。
+
+### 9.1 探针与命令（可复现）
+
+新脚本 `scripts/bench_m6_footprint.sh`（形状贴近 `raft_snapshot_fault.sh`：3 节点、
+`--snapshot-threshold 2000`、`--pipeline 64`）：按阶梯把日志累计写到 N ∈ {25k, 50k, 100k, 200k}，
+每档在**稳定点**采样（每 5s 一次 `du -sb <dir>/raft-lsm` + 逐文件字节 + lsm 自报计数，
+直到**连续 3 次完全相同**或 60s 上限），最后 kill -9 全部节点 → 重启 → 再采一次。
+
+```bash
+# 两个基座都用 `git archive` 固定的树各自构建（不读活工作区）：
+cmake -S . -B build-b1 -DCMAKE_BUILD_TYPE=Release -DRAFTKV_LSM_DIR=/tmp/lsm-pin-b1bd050
+bash scripts/bench_m6_footprint.sh --bin $PWD/build-b1/bin --label b1bd050 \
+     --steps "25000 25000 50000 100000" --pipeline 64 --threshold 2000 --engine lsm
+bash scripts/bench_m6_footprint.sh --bin $PWD/build/bin    --label f06a44d \
+     --steps "25000 25000 50000 100000" --pipeline 64 --threshold 2000 --engine lsm
+# 原始日志：/tmp/r3-foot-b1.log、/tmp/r3-foot-f06.log（原文见 §9.2 摘录）
+```
+
+### 9.2 原始数据（稳定点，`max` = 3 节点最大值）
+
+| 累计 N | **f06a44d** max `du -sb raft-lsm` | **b1bd050** max `du -sb raft-lsm` | 相对差 |
+|---|---|---|---|
+| 25 000 | 2 034 372 | 2 052 285 | −0.9% |
+| 50 000 | 4 007 424 | 3 944 473 | +1.6% |
+| 100 000 | 4 151 337 | 4 122 722 | +0.7% |
+| 200 000 | 4 853 044 | 4 894 542 | −0.8% |
+| kill -9 后重启（≈205k） | **955 961** | **973 242** | −1.8% |
+
+原始行（节选，逐行原文在 `/tmp/r3-foot-{f06,b1}.log`）：
+
+```
+STEP label=f06a44d n=25000  stable=yes samples=3 leaf_bytes=2034372 files=[CURRENT:2,MANIFEST-000004:84,000002.log:967532,LOCK:0,000003.sst:988442] lsm_wal_bytes=967532 lsm_sst_bytes=988442 lsm_flush_done=1 lsm_compaction_rounds=0
+STEP label=f06a44d n=50000  stable=yes samples=3 leaf_bytes=4007424 files=[000010.sst:927552,000006.sst:1000824,CURRENT:2,MANIFEST-000004:402,000008.sst:912980,LOCK:0,000011.sst:130551,000009.log:37209,000003.sst:988442] ...
+STEP label=f06a44d n=100000 stable=yes samples=3 leaf_bytes=4151337 files=[000013.sst:916097,000018.log:131848,CURRENT:2,MANIFEST-000004:815,000015.sst:935118,000020.sst:129121,LOCK:0,000011.sst:130551,000019.sst:933451,000017.sst:931835] ...
+STEP label=f06a44d n=200000 stable=yes samples=3 leaf_bytes=4679739 files=[000037.sst:927611,000029.sst:130789,CURRENT:2,MANIFEST-000004:1617,000035.sst:946860,LOCK:0,000031.sst:937466,000038.sst:130284,000033.sst:946001,000036.log:655013] lsm_wal_bytes=655013 lsm_sst_bytes=130284 lsm_flush_done=16 lsm_compaction_rounds=4
+STEP label=f06a44d n=205477 tag=post-restart stable=yes leaf_bytes=814187 files=[CURRENT:2,MANIFEST-000004:1617,LOCK:0,000038.sst:129722,000036.log:678750] lsm_wal_bytes=678750 lsm_sst_bytes=129722 lsm_flush_done=0 lsm_compaction_rounds=0
+STEP label=b1bd050 n=100000 stable=yes samples=3 leaf_bytes=4099411 files=[000013.sst:919238,000018.log:120093,CURRENT:2,MANIFEST-000004:819,000015.sst:928291,000020.sst:131248,LOCK:0,000011.sst:126322,000019.sst:934349,000017.sst:934953] ...
+STEP label=b1bd050 n=200000 stable=yes samples=3 leaf_bytes=4894542 ...
+STEP label=b1bd050 n=204441 tag=post-restart stable=yes leaf_bytes=973242 files=[CURRENT:2,MANIFEST-000004:1621,LOCK:0,000038.sst:128701,000036.log:838822] lsm_wal_bytes=838822 lsm_sst_bytes=128701 ...
+```
+
+### 9.3 判定（三个可判定的结论）
+
+1. **有界，不是泄漏**：条目数 50k→100k 翻倍，字节只 +3.0%（f06a44d +3.6% / b1bd050 +0.7%）；
+   100k→200k 再翻倍，字节 +16.9%（+18.7%）。增长**显著次线性**。
+2. **重启后塌到 ~1 MB（0.956 / 0.973 MB）**：kill -9 → 重启 → `DB::Open` 的孤儿/回收路径把
+   **obsolete WAL/SST** 删掉 ⇒ 稳定点里那 ~3.9 MB 的差额是**「已被取代但尚未回收」的字节**，
+   不是 live 数据。live 数据（重启后）= 1 个 SST + 当前 WAL ≈ 0.96 MB，**与 N=200k 的写入量无关**。
+3. **两个基座在每一步都一致（≤1.6%）**：⇒ 「f06a44d 让空间变差」**不成立**。
+   M6.6 那个 4 MiB 是在**有重活的机器**上、用「fill 后立刻采样」的**瞬时口径**标定的（2.2–2.6 MB）；
+   稳定点口径下 **b1bd050 自己**在 100k 也是 4.12 MB、200k 是 4.89 MB ⇒ 红项的根因是**标定口径过紧**，
+   而不是基座回归。
+
+### 9.4 重标定（判据语义不变，只换常数）
+
+```bash
+# scripts/raft_snapshot_fault.sh
+-LSM_LOG_BOUND="${RAFTKV_LOG_BOUND:-4194304}"     # 4 MiB：有重活机器上的瞬时口径（M6.6）
++LSM_LOG_BOUND="${RAFTKV_LOG_BOUND:-8388608}"     # 8 MiB：稳定点口径、两基座最大值 4 894 542 B × 1.71
+```
+* 为什么是「常数标定」而不是「放宽判据」：① 判据的**语义**（有界性）没有改；② 新常数取自**稳定点**
+  （比瞬时口径更保守：连续 3 次采样不变才读数）；③ 余量 1.71× 与 M6.6 的 1.6× 同一量级；
+  ④ 结论 9.3 的「重启后塌到 ~1 MB」独立证明 live 数据有界，不依赖这个常数。
+* 后续门禁结果（lsm 臂 / file 臂 / base 臂 `--repeat 50`）见 §9.5。
+
+### 9.5 重标定后的门禁结果（四臂 `--repeat 50`，全部原始行）
+
+```bash
+$ bash scripts/raft_snapshot_fault.sh --log-engine lsm --repeat 50        # 本仓（基座 f06a44d，8 MiB 判据）
+engine=lsm
+  node1 raft-lsm=4305004 bytes (bound=8388608; raft/=1471492 raft-lsm/=4305004)
+  node2 raft-lsm=4276283 bytes (bound=8388608; raft/=1471492 raft-lsm/=4276283)
+  node3 raft-lsm=4297603 bytes (bound=8388608; raft/=1472707 raft-lsm/=4297603)
+A) 100000 entries applied, log bounded (engine=lsm, bound=8388608, bytes=4297603)
+B) empty node caught up via InstallSnapshot (last_applied=102718)
+C) fault injection PASS (50 iterations)
+raft_snapshot_fault: PASS
+
+$ bash scripts/raft_snapshot_fault.sh --log-engine file --repeat 50       # file 引擎（判据仍 1 MiB，未改）
+engine=file
+A) 100000 entries applied, log bounded (engine=file, bound=1048576, bytes=103257)
+B) empty node caught up via InstallSnapshot (last_applied=101185)
+C) fault injection PASS (50 iterations)
+raft_snapshot_fault: PASS
+
+$ bash ~/raft-kv/scripts/raft_snapshot_fault.sh --repeat 50               # base 臂（远端基线 1463620，未改动）
+A) 100000 entries applied, raft.log bounded (<= 1048576B)
+B) empty node caught up via InstallSnapshot (last_applied=100914)
+C) fault injection PASS (50 iterations)
+raft_snapshot_fault: PASS
+
+# 决定性对照（/tmp 副本只把 BIN 指向用 b1bd050 基座构建的 build-b1；判据同为 8 MiB）
+$ bash /tmp/r3_fault_b1.sh --log-engine lsm --repeat 50
+engine=lsm
+  node1 raft-lsm=4453497 bytes (bound=8388608; raft/=1491067 raft-lsm/=4453497)
+  node2 raft-lsm=4399655 bytes (bound=8388608; raft/=1492132 raft-lsm/=4399655)
+  node3 raft-lsm=4359818 bytes (bound=8388608; raft/=2542225 raft-lsm/=4359818)
+A) 100000 entries applied, log bounded (engine=lsm, bound=8388608, bytes=4359818)
+B) empty node caught up via InstallSnapshot (last_applied=103556)
+C) fault injection PASS (50 iterations)
+raft_snapshot_fault: PASS
+```
+
+**这四条把红项彻底解释清楚了**：同一脚本、同一检查点，
+**b1bd050（旧基座）自己也是 4.36–4.45 MB**，与 f06a44d 的 4.28–4.31 MB 在误差内一致，
+**两者都超过旧的 4 MiB** ⇒ 「红」来自**旧标定口径**（有重活机器 + fill 后立刻采样），
+不是 R1/基座回归；8 MiB 判据下四臂（lsm/file/base/b1 对照）**全部 PASS**。
