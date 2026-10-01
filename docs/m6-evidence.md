@@ -393,7 +393,7 @@ $ ./build-nolsm/bin/raftkv_raft_tests --gtest_filter='LsmLogStore.*'
 
 1. **未做**：`tests/raft_restart_test.cpp` 参数化（M6.3）、Disk fixture 参数化（M6.4）、e2e 脚本双引擎（M6.5）、故障注入（M6.6）、A/B（M6.7）—— 本步**不接 Raft**。
 2. **未验证（覆盖缺口）**：`TruncateNoSync` 的**掉电**（页缓存丢失）语义 —— 测试装置无法构造（需要假文件系统/掉电模型）。设计 §4-M6.3 的 `TruncatesTornTail` 在 lsm 侧同样没有直接注入点；lsm 侧的等价证据目前是 `TornWalTailIsTruncatedByOpenAndCounted`（尾部残骸）+ M6.6 的真实 `kill -9`。
-3. **未验证**：LsmLogStore 在并发（多线程 append/sync/slice 交错）下的正确性 —— 本步单测是单线程的；TSan 覆盖在 M6.8/H12（设计 §5.2）与 M6.5/M6.6 的端到端。
+3. ~~未验证：LsmLogStore 的并发正确性~~ → **M6.r3 已补真并发用例**：`LsmLogStore.ConcurrentAppendSyncAndReadersStayConsistent`（1 写者 + 3 读者）Release/ASan/TSan 各 ×200 全绿、0 报告（见 §M6.r3-C）。**仍未覆盖**的是「真实 node 进程里的多线程路径（ticker/每连接线程/reactor）」的 sanitizer 覆盖 —— TSan 不跨进程，那部分只有 Release 的 e2e/故障脚本。
 4. **未验证**：`slice()` 的解码失败路径（`slice_decode_errors`）与毒化路径 —— 未构造注入点（需要介质损坏）。
 5. **未验证**：性能（每次 `slice()` 建迭代器的开销 R2、`truncateSuffix` 的写放大 R3）—— M6.7。
 
@@ -731,7 +731,7 @@ raft_snapshot_fault: PASS                              # H6（file 臂不退化�
 P99 未采集、D5 通道无效、lsm 内部统计未接线、D4 口径未采集、正式 n 未达、R2/R3 无定向性能数字、
 机器安静度限制、TSan 未跑全量、base 臂未跑 sanitizer）。
 
-**H11/H12 已在 M6.8 收口**：
+**H11/H12 已在 M6.8 收口（注意口径：H12 当时只跑 `LsmLogStore.*` 窄面，20/20；全量 TSan 的数字与更正见 §M6.r3-C）**：
 
 ```bash
 $ cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_ASAN=ON -DRAFTKV_LSM_DIR=/tmp/lsm-pin-b1bd050
@@ -859,3 +859,58 @@ FAIL: node1 raft-lsm=4450355 exceeds 4194304 (not bounded)   # exit 1
   `docs/m6-bench.md` §9（`--RAFTKV_LOG_BOUND` 仍可覆盖以复标定）。
 * 四臂 `--repeat 50` 全 PASS：lsm（8 MiB，A/B/C）、file（1 MiB，A/B/C）、base 臂（`~/raft-kv/scripts`，A/B/C）、
   b1bd050 对照臂（副本，8 MiB，A/B/C）。原始行在 `docs/m6-bench.md` §9.5。
+
+---
+
+## M6.r3-C：TSan 全量报告的**更正**、分类与基线对照
+
+### 1) 更正（含「warnings=0 取错日志」的澄清）
+
+* M6.8 的 H12 只覆盖 `LsmLogStore.*` **窄面**（20/20、0 报告）⇒ **不能**外推成「TSan 干净」。
+  M6.r3 补跑全量后：**122/122 断言通过，但 TSan 报 16 条 warning**（rc=66）。
+  凡是把「TSan 全量 0 warning / 0 race」写进文档或提交信息的说法，一律以上面这组数字为准（本节即更正落点）。
+* **关于 `/tmp/r3-queue-all.log` 里的 `tsan_build_rc=0 warnings=0`**：该 `warnings=` 字段的来源是
+  `grep -c 'warning:' /tmp/r3-tsan-build.log`，即**编译期**告警数（确实是 0），与它同一行打印的
+  `tsan_tests_rc=66` 是**测试运行**的返回码。字段名与并排位置让它容易被读成「测试运行的 TSan 警告数」——
+  这里明确澄清口径；真实数字在 `/tmp/r3-tsan-tests.log`、`/tmp/r3-tsan-full2.log`（16 条）与
+  `/tmp/r3-tsan-lsm.log`、`/tmp/r3-tsan-lsm2.log`（窄面 0 条）。**没有**静默改掉那行输出。
+
+### 2) 原始计数行（两侧同一命令、同一 TSan 配置）
+
+```
+HEAD（9e5e127 + M6.r3）        /tmp/r3-tsan-full2.log： [  PASSED  ] 122 tests. / rc=66
+                               grep -c 'WARNING: ThreadSanitizer' → 16
+                               grep -c 'data race'                → 0
+                               末行：ThreadSanitizer: reported 16 warnings
+基线 ~/raft-kv @ 1463620       /tmp/r3-baseline-tsan-full.log： [  PASSED  ] 94 tests. / rc=66
+                               grep -c 'WARNING: ThreadSanitizer' → 16
+                               grep -c 'data race'                → 0
+                               末行：ThreadSanitizer: reported 16 warnings
+窄面 LsmLogStore.*（HEAD）      /tmp/r3-tsan-lsm2.log： [  PASSED  ] 21 tests. / rc=0 / 0 条
+并发用例 ×200（HEAD）           /tmp/r3-tsan-conc.log： 200/200 OK / rc=0 / 0 条 / 0 data race
+ASan 全量（HEAD）              /tmp/r3-asan-tests2.log： [  PASSED  ] 122 tests. / rc=0 / 0 报告
+```
+
+### 3) 分类表（类型 × 次数 × 顶层应用帧 × 触发用例；两侧逐项一致）
+
+| 类型 | 次数 | 顶层应用帧 | 触发用例 |
+|---|---|---|---|
+| `double lock of a mutex` | 1 | `src/raft/raft_node.cpp:140`（`becomeFollower` → `condition_variable_any::notify_all`） | RaftPerf.A11 |
+| `double lock of a mutex` | 7 | `src/raft/raft_node.cpp:895`（`awaitCommit` → `wait_until`） | A11×1 / A13×1 / A15×5 / A16×1 |
+| `lock-order-inversion` | 8 | `src/raft/raft_node.cpp:164`（`becomeLeader` → `notify_all`；环另一侧 = `awaitCommit` 的 `wait_until` → `ProbedMutexT::lock`） | A11×1 / A13×1 / A15×5 / A16×1 |
+| `data race` | **0** | — | — |
+
+**判断依据（可核查，非猜测）**：① 两侧条数与逐用例分布完全相同；② `src/raft/raft_node.cpp`、
+`tests/raft_perf_test.cpp`、`src/raft/lock_probe.h` 在 M6 期间**一行未改**（`git diff --stat 6aabc27..HEAD` 为空）；
+③ M6 的 `engineStatsFragment()` 只被 `src/main_raft_node.cpp` 引用，**不在单元测试二进制内**。
+
+### 4) 是否影响 M6 的结论？——逐条回答
+
+* **不影响 lsm 存储层的正确性结论**：窄面 `LsmLogStore.*` 与**新增的真实多线程用例**在 TSan/ASan 下均 0 报告；
+  16 条报告全部落在 `RaftNode` 的 `condition_variable_any` 使用路径（与本里程碑改动无关）。
+* **但它确实掩盖了「进程级并发面」**：`LsmLogStore` 在**真实 node 进程**里的并发调用
+  （ticker 线程 + 每连接线程 + reactor 回调）只在 **Release** 二进制的 e2e/故障脚本里跑过，
+  **没有** TSan 覆盖（TSan 也不跨进程）。
+* **因此新增了真并发用例**（`LsmLogStore.ConcurrentAppendSyncAndReadersStayConsistent`：1 写者 + 3 读者）：
+  Release ×200、ASan ×200、TSan ×200 全部 200/200 通过、**0 报告**（计数行见上）。
+  它把「store 内锁纪律」这一层补上了 sanitzer 证据；**替代不了**进程级覆盖，故仍列在限制清单里。

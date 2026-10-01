@@ -604,6 +604,67 @@ TEST(LsmLogStore, ValueBytesMatchFileLogStoreOnDisk) {
   std::filesystem::remove_all(dirB);
 }
 
+// ---- M6.r3：**真正的多线程**用例（此前 LsmLogStore 的用例都是单线程的，
+//      「TSan 窄面 0 报告」不足以支撑并发结论 —— 见 docs/m6-evidence.md 的限制清单）。
+//
+// 负载形状：1 个写者（appendNoSync 批 + 周期性 sync）+ 3 个读者（lastIndex/termAt/slice 并发）。
+// 不变式：任何时刻 `slice()` 返回的条目，其 `termAt(index)` 必须等于该条目的 term
+// （没有并发 truncate/compact 时 term 不会变；这条一致性由 store 的 mu_ 保证）。
+TEST(LsmLogStore, ConcurrentAppendSyncAndReadersStayConsistent) {
+  const std::string dir = tempDir();
+  LsmLogStore store(dir);
+  constexpr Index kBatches = 400;   // 400 批 × 5 条 = 2000 条
+  constexpr size_t kBatch = 5;
+  std::atomic<bool> done{false};
+  std::atomic<int> write_failures{0};
+  std::atomic<size_t> inconsistent{0};
+
+  std::thread writer([&] {
+    Index next = 1;
+    for (Index b = 0; b < kBatches; ++b) {
+      std::vector<LogEntry> es;
+      for (size_t i = 0; i < kBatch; ++i) {
+        es.push_back(entry(next, static_cast<Term>(1 + (next % 3)),
+                           "k" + std::to_string(next), "v"));
+        ++next;
+      }
+      if (!store.appendNoSync(es)) { ++write_failures; break; }
+      if (b % 4 == 3 && !store.sync()) { ++write_failures; break; }
+    }
+    done.store(true);
+  });
+
+  auto reader = [&] {
+    size_t local_bad = 0;
+    while (!done.load()) {
+      const Index last = store.lastIndex();
+      if (last > 0) (void)store.termAt(1 + (last % 16));
+      auto s = store.slice(1 + (last % 8), 4, SIZE_MAX);
+      for (const LogEntry& e : s) {
+        if (store.termAt(e.index) != e.term) ++local_bad;
+      }
+    }
+    inconsistent.fetch_add(local_bad);
+  };
+  std::thread r1(reader), r2(reader), r3(reader);
+  writer.join();
+  r1.join();
+  r2.join();
+  r3.join();
+
+  EXPECT_EQ(write_failures.load(), 0) << "并发下写入方不得失败";
+  EXPECT_EQ(inconsistent.load(), 0u)
+      << "slice() 的条目必须与 termAt() 一致（store 的 mu_ 下的同一份状态）";
+  EXPECT_EQ(store.lastIndex(), kBatches * kBatch);
+  Term t = 0;
+  int v = -1;
+  Index li = 0;
+  ASSERT_TRUE(store.load(t, v, li));
+  EXPECT_EQ(li, kBatches * kBatch);
+
+  std::filesystem::remove_all(dir);
+}
+
 #else  // !RAFTK_HAVE_LSM
 
 // 未配置 lsm 的构建：本文件只保留这一条**真断言**的用例（不是 GTEST_SKIP）。

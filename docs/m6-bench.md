@@ -157,8 +157,51 @@ lsm p=64 rep=3 n=4000 ms=10479.0 ms_per_write=2.620 qps=382 verify=[verified 400
 | H8 `verify` 含 `missing 0` | ✅ 9/9 格 | ✅ 9/9 格 | ✅ 9/9 格 | §2 的 27 行（另见作废的 strace 轮） |
 | H9 `base` 臂不退化 | ✅ 基准 | ✅ ±1% 内 | — | §3 的 base/file 两列；且 **base 臂的 H2/H3/H4/H5 脚本门禁本轮已跑并 PASS**（见 §7 第 1 条的关闭说明） |
 | H10 无多数派时写不返回 OK | 内嵌于 H2/H5/H6 | 同左 | 同左 | 脚本内既有断言；三臂的 PASS 即该断言通过 |
-| H11 ASan 构建下 H1 无报告 | — | ✅ **通过** | ✅ **通过** | `cmake -B build-asan -DENABLE_ASAN=ON`（0 warning）⇒ `[  PASSED  ] 121 tests.`（50991 ms），无 ASan 报告 |
-| H12 TSan 构建下 `LsmLogStore` 无报告 | — | — | ✅ **通过** | `cmake -B build-tsan -DENABLE_TSAN=ON`（0 warning）+ `setarch x86_64 -R` ⇒ `LsmLogStore.*` **20/20 PASSED**（2008 ms），无 TSan 报告 |
+| H11 ASan 构建下 H1 无报告 | — | ✅ **通过** | ✅ **通过** | `cmake -B build-asan -DENABLE_ASAN=ON`（0 warning）⇒ `[  PASSED  ] 122 tests.`（M6.r3 时点的全量，含新增并发用例），0 ASan 报告；该用例 ×200 亦 0 报告 |
+| H12 TSan 构建下 `LsmLogStore` 无报告 | — | ⚠️ 全量 16 条既有报告（见 §4.1） | ⚠️ **窄面 ✅ / 全量 16 条既有报告** | 窄面：`LsmLogStore.*` **21/21 PASSED**、0 报告；新增多线程用例 ×200、0 报告。**全量 TSan：122/122 断言通过但报 16 条**（8 double-lock + 8 lock-order-inversion、0 data race、rc=66），与基线 1463620 逐项一致（§4.1） |
+
+
+### 4.1 ⚠️ TSan：**窄面干净，全量不干净**（更正 + 基线对照，M6.r3-C）
+
+> **更正**：M6.8 时 H12 只跑了 `LsmLogStore.*` 窄面（20/20、0 报告），**不能**据此说「TSan 干净」。
+> M6.r3 补跑**全量 TSan** 后，如实数字如下（并把「取错日志」那次误读一并写清楚，不静默修掉）。
+
+```bash
+# HEAD（9e5e127 + M6.r3：wiring + 新增并发用例），命令与基线**完全相同**：
+$ setarch $(uname -m) -R ./build-tsan/bin/raftkv_raft_tests
+[==========] 122 tests from 18 test suites ran. (…)
+[  PASSED  ] 122 tests.
+ThreadSanitizer: reported 16 warnings          # rc=66
+$ grep -c 'WARNING: ThreadSanitizer' /tmp/r3-tsan-full2.log      → 16
+$ grep -c 'data race'                /tmp/r3-tsan-full2.log      → 0
+
+# 基线（M6 之前的树）：~/raft-kv @ 1463620（其代码与 6aabc27 的树逐字节相同——
+#   `git -C ~/raft-kv-lsm diff --stat 1463620 6aabc27` 只有 docs/m6-design.md 一项），
+#   TSan 配置相同（build 在 /tmp，未改 ~/raft-kv 的受版本控制文件）：
+$ setarch $(uname -m) -R /tmp/rk-baseline-tsan/bin/raftkv_raft_tests
+[==========] 94 tests from 15 test suites ran. (…)
+[  PASSED  ] 94 tests.
+ThreadSanitizer: reported 16 warnings          # rc=66
+$ grep -c 'WARNING: ThreadSanitizer' /tmp/r3-baseline-tsan-full.log  → 16
+$ grep -c 'data race'                /tmp/r3-baseline-tsan-full.log  → 0
+```
+
+**分类（类型 × 次数 × 顶层应用帧 × 触发用例）——两侧逐项一致**
+
+| 类型 | 次数 | 顶层应用帧 | 触发用例（HEAD / 基线 相同） |
+|---|---|---|---|
+| `double lock of a mutex` | 1 | `src/raft/raft_node.cpp:140`（`becomeFollower` → `condition_variable_any::notify_all`） | `RaftPerf.A11` |
+| `double lock of a mutex` | 7 | `src/raft/raft_node.cpp:895`（`awaitCommit` → `wait_until`） | A11×1、A13×1、A15×5、A16×1 |
+| `lock-order-inversion` | 8 | `src/raft/raft_node.cpp:164`（`becomeLeader` → `notify_all`；环的另一侧是 `awaitCommit` 的 `wait_until` 经 `ProbedMutexT::lock`） | A11×1、A13×1、A15×5、A16×1 |
+| **`data race`** | **0** | — | — |
+
+⇒ **两侧同为 16 条（8 double-lock + 8 inversion）、0 data race、逐用例逐类型完全相同**
+⇒ 判定：**上游/脚手架既有的 TSan 报告，M6 未引入任何新类别或新实例**；
+但**这也不是「干净」**——全量 TSan 的退出码是 66，报告确实存在。
+代码依据（可核查）：`src/raft/raft_node.cpp`、`tests/raft_perf_test.cpp`、`src/raft/lock_probe.h`
+在 M6 期间**一行未改**（`git diff --stat 6aabc27..HEAD -- <这三个文件>` 为空），
+且 M6 新增的 `engineStatsFragment()` 只被 `src/main_raft_node.cpp`（独立可执行文件）引用，
+**不在单元测试二进制里**。
 
 ## 5. 观测 O1–O8 / D1–D10 的数字
 
@@ -293,8 +336,11 @@ FAIL: node1 raft-lsm=4450355 exceeds 4194304 (not bounded)
 7. **正式口径的 n（设计 §5.5 的 5000/20000/20000）**：本轮用 1000/4000/4000（时间盒 + lsm 写吞吐限制）；每行都打印 `n=`。
 8. **`slice()` / `truncateSuffix` 的定向性能（R2/R3）**：只有功能证据，没有性能数字。
 9. **A/B 期间的机器安静度**：27 格期间 loadavg 4.7–5.4（VM 上有另一 agent 的重活窗口）；三臂同轮交替把相对比较的偏置压到最小，但仍属已知限制。
-10. **H11/H12 的口径**：H11 是 ASan **全量**（121/121）；H12 是 TSan 的 **`LsmLogStore.*`**（20/20）——**不是** TSan 全量（M6.8 时间盒内未跑 TSan 全量）。
-11. **base 臂的 ASan/TSan**：未做（只在 `~/raft-kv-lsm` 上跑）。
+10. **H11/H12 的口径（已更正）**：H11 = ASan **全量**（**122/122**，含 M6.r3 新增并发用例，0 报告）；
+    H12 = TSan 的 **`LsmLogStore.*` 窄面**（21/21，0 报告）+ 新增并发用例 ×200（0 报告）——
+    **全量 TSan 不是干净的**：122/122 断言通过但 TSan 报 **16 条**（8 double-lock + 8 inversion，0 data race，rc=66），
+    与 M6 之前的树 1463620 **逐项一致**（§4.1）。
+11. **base 臂（`~/raft-kv`）的 ASan/TSan**：**已做 TSan 全量**（16 条既有报告，见 §4.1）；base 臂的 ASan 未做。
 12. **基座更换后的门禁重跑**：`f06a44d` 上已重跑全量单测（121/121）与 A/B；e2e/其余 fault 脚本未重跑。
 13. **node 侧 P99 的分辨率**：桶上界只到 50 ms，本负载下三臂都落顶桶 ⇒ 分位数**无法用于比较**；`max` 无计数器。
 
@@ -331,7 +377,10 @@ exit=1
 * 空间（R4）**不受 R1 修复影响**：仍是大负载下 ≈50×（§6.4）、小负载 ≈1.2–1.5×。
 * 仍然未采集：P99 的**节点侧**分位（补充轮若完成见 §5）、fsync 次数（strace 通道无效）、
   100k 条后的启动恢复（D4）、正式口径 n。
-* **并发正确性门禁已收口**：ASan 全量 121/121、TSan 的 `LsmLogStore.*` 20/20，均 0 warning、0 报告（H11/H12）。
+* **并发正确性门禁（更正后的口径）**：ASan 全量 **122/122**（0 报告）；
+  TSan **窄面** `LsmLogStore.*` 21/21 与新增的多线程用例 ×200 均 0 报告；
+  **全量 TSan 有 16 条既有报告**（8 double-lock + 8 lock-order-inversion、0 data race），
+  与 M6 之前的树 **逐项一致** ⇒ M6 未引入，但**不能**表述为「TSan 干净」（§4.1）。
 
 ### 6.4.2 诊断轮（**不改仓库判据**）：把上界临时抬到 128 MiB 的 `/tmp` 副本
 
