@@ -148,14 +148,14 @@ lsm p=64 rep=3 n=4000 ms=10479.0 ms_per_write=2.620 qps=382 verify=[verified 400
 | 门禁 | base | file | lsm | 判据字符串 / 证据 |
 |---|---|---|---|---|
 | H1 单测 `raftkv_raft_tests` | n/a | ✅ 121/121 PASSED | ✅ 121/121 PASSED（同一二进制，lsm 用例在列） | `[  PASSED  ] 121 tests.`（`docs/m6-evidence.md` §M6.4） |
-| H2 `raft_e2e.sh` | ⛔ 未跑（见 §7） | ✅ `raft_e2e: PASS` | ✅ `raft_e2e: PASS` | evidence §M6.5 |
-| H3 `raft_snapshot_e2e.sh` | ⛔ 未跑 | ✅ `raft_snapshot_e2e: PASS` | ✅ `raft_snapshot_e2e: PASS` | evidence §M6.5 |
-| H4 `raft_membership_e2e.sh` | ⛔ 未跑 | ✅ PASS（exit 0） | ✅ PASS（exit 0） | evidence §M6.5（verify 内部断言 `missing 0`） |
-| H5 `raft_fault.sh --repeat 50` | ⛔ 未跑 | ✅ `raft_fault: PASS (50 iterations)` | ✅ `raft_fault: PASS (50 iterations)` | evidence §M6.6 |
+| H2 `raft_e2e.sh` | ✅ `raft_e2e: PASS`（`~/raft-kv/scripts`，未改动） | ✅ `raft_e2e: PASS`（b1bd050）| ✅ `raft_e2e: PASS`（f06a44d，wiring 构建） | 三臂都跑了；本轮 raw `/tmp/r2-*.log` |
+| H3 `raft_snapshot_e2e.sh` | ✅ PASS | ✅ PASS（b1bd050）| ✅ PASS（f06a44d） | 同上 |
+| H4 `raft_membership_e2e.sh` | ✅ PASS（exit 0） | ✅ PASS（b1bd050）| ✅ PASS（f06a44d） | 同上（verify 内部断言 `missing 0`） |
+| H5 `raft_fault.sh --repeat 50` | ✅ `raft_fault: PASS (50 iterations)` | ✅ PASS（b1bd050）| ✅ PASS（f06a44d） | 三臂都跑了 |
 | H6 `raft_snapshot_fault.sh` | ⛔ 未跑 | ✅ PASS（`--repeat 1`，A/B/C 全过） | ⛔ **FAIL（红，f06a44d）** | 基座 f06a44d + `--repeat 50`：A 段空间判据 `node1 raft-lsm=4450355 exceeds 4194304 (not bounded)` ⇒ **exit 1**；原始输出见 §7.1 |
-| H7 `raft_membership_fault.sh --repeat 50` | ⛔ 未跑 | ⛔ 未跑（file 臂本步未重复） | ✅ `raft_membership_fault: PASS (50 iterations)` | evidence §M6.6 |
+| H7 `raft_membership_fault.sh --repeat 50` | ⛔ 未跑（base 臂本步未跑） | ⛔ 未跑（file 臂未跑） | ✅ `raft_membership_fault: PASS (50 iterations)`（b1bd050 与 f06a44d 各一次） | evidence §M6.6 + 本轮 raw |
 | H8 `verify` 含 `missing 0` | ✅ 9/9 格 | ✅ 9/9 格 | ✅ 9/9 格 | §2 的 27 行（另见作废的 strace 轮） |
-| H9 `base` 臂不退化 | ✅ 基准 | ✅ ±2% 内 | — | §3 的 base/file 两列；**H2–H7 的 base 臂未跑**（见 §7） |
+| H9 `base` 臂不退化 | ✅ 基准 | ✅ ±1% 内 | — | §3 的 base/file 两列；且 **base 臂的 H2/H3/H4/H5 脚本门禁本轮已跑并 PASS**（见 §7 第 1 条的关闭说明） |
 | H10 无多数派时写不返回 OK | 内嵌于 H2/H5/H6 | 同左 | 同左 | 脚本内既有断言；三臂的 PASS 即该断言通过 |
 | H11 ASan 构建下 H1 无报告 | — | ✅ **通过** | ✅ **通过** | `cmake -B build-asan -DENABLE_ASAN=ON`（0 warning）⇒ `[  PASSED  ] 121 tests.`（50991 ms），无 ASan 报告 |
 | H12 TSan 构建下 `LsmLogStore` 无报告 | — | — | ✅ **通过** | `cmake -B build-tsan -DENABLE_TSAN=ON`（0 warning）+ `setarch x86_64 -R` ⇒ `LsmLogStore.*` **20/20 PASSED**（2008 ms），无 TSan 报告 |
@@ -278,7 +278,9 @@ FAIL: node1 raft-lsm=4450355 exceeds 4194304 (not bounded)
 
 ## 7. 未验证清单（每条一行 + 原因）
 
-1. **H9 的 base 臂脚本门禁（用 `~/raft-kv/scripts/*.sh` 跑 H2–H7）**：只跑了 A/B 的 base 臂（27 格全 `missing 0`），没跑 base 的 e2e/fault 脚本。
+1. ~~H9 的 base 臂脚本门禁~~ → **已补**：用 `~/raft-kv/scripts/*.sh`（只读使用该仓库，未改任何受版本控制的文件）跑完
+   `raft_e2e` / `raft_snapshot_e2e` / `raft_membership_e2e` / `raft_fault --repeat 50`，四条全 PASS（原始日志 `/tmp/r2-base-*.log`）。
+   base 臂的 `raft_snapshot_fault` / `raft_membership_fault` 仍未跑（登记为未做）。
 2. **`raft_snapshot_fault.sh --log-engine lsm --repeat 50`**：在基座 **f06a44d** 上**跑完了，结果是红**——A 段的空间判据超标（`4450355 > 4194304`），exit 1，B/C 段未执行。原始输出与两种解释见 §6.4.1。
 3. **P99 / max 延迟（D2）**：node 侧直方图未实现（设计 D12）。
 4. **fsync 次数/耗时（D5/R1）**：`strace -f -c` 通道实测无效（连 base 臂都 verify 失败），无可信数字。
