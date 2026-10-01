@@ -328,3 +328,32 @@ exit=1
 * 仍然未采集：P99 的**节点侧**分位（补充轮若完成见 §5）、fsync 次数（strace 通道无效）、
   100k 条后的启动恢复（D4）、正式口径 n。
 * **并发正确性门禁已收口**：ASan 全量 121/121、TSan 的 `LsmLogStore.*` 20/20，均 0 warning、0 报告（H11/H12）。
+
+### 6.4.2 诊断轮（**不改仓库判据**）：把上界临时抬到 128 MiB 的 `/tmp` 副本
+
+为了把「空间超标」与「故障注入语义本身」分开，我在 `/tmp` 下用**仓库脚本的副本**
+（`sed`：把 `ROOT` 指到本仓、把 `LSM_LOG_BOUND` 临时抬到 128 MiB）跑完整 `--repeat 50`。
+**仓库里的 `scripts/raft_snapshot_fault.sh` 与它的 4 MiB 判据一个字都没改**（见 §7.1 的红项）。
+
+```
+$ bash /tmp/diag_snapfault_lsm.sh --log-engine lsm --repeat 50     # 基座 f06a44d
+engine=lsm
+  node1 raft-lsm=4427704 bytes (bound=134217728; raft/=1482577 raft-lsm/=4427704)
+  node2 raft-lsm=4501436 bytes (bound=134217728; raft/=1482997 raft-lsm/=4501436)
+  node3 raft-lsm=4364100 bytes (bound=134217728; raft/=1482997 raft-lsm/=4364100)
+A) 100000 entries applied, log bounded (engine=lsm, bound=134217728, bytes=4364100)
+B) empty node caught up via InstallSnapshot (last_applied=104084)
+C) fault injection PASS (50 iterations)
+raft_snapshot_fault: PASS
+```
+
+**结论（可判定，且与红项不矛盾）**
+
+* 三个节点的稳态目录字节 **4.364–4.501 MB**（同一检查点）⇒ 与红项的 4.45 MB **一致、可复现**，
+  **不是**测量噪声；相对 b1bd050 的 2.22–2.58 MB，**同一负载的 lsm 稳态足迹增大约 1.75×**。
+* **H6 的故障注入语义本身（B 段 InstallSnapshot 追平 + C 段 50 轮 kill -9/SIGSTOP）在 f06a44d 上 PASS**；
+  红只红在「用 b1bd050 标定的 4 MiB 上界」这一条。
+* 因此红项的**正确处置**是二选一（由 lsm 侧/父代理裁决，本文件不替他们决定）：
+  (a) 查 f06a44d 的 WAL 轮转/回收是否有「未回收字节变多」的副作用；
+  (b) 在**安静机器 + 多轮**上重新标定 `LSM_LOG_BOUND`（候选 ≈8 MiB，即实测最大 4.501 MB 的 ~1.8× 余量），
+      并把这轮标定过程写进本文件。
