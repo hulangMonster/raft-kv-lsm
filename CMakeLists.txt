@@ -76,15 +76,6 @@ target_link_libraries(raftkv_raft PUBLIC Threads::Threads)
 # pin 出来的副本（如 /tmp/lsm-pin-b1bd050），**不读活工作区**。
 # 找不到源码 ⇒ 不定义 RAFTK_HAVE_LSM：`--log-engine=lsm` 明确报错退出，绝不静默降级。
 set(RAFTKV_LSM_DIR "$ENV{HOME}/lsm-kv" CACHE PATH "lsm-kv source tree (use a pinned copy)")
-if(EXISTS "${RAFTKV_LSM_DIR}/CMakeLists.txt")
-  add_subdirectory("${RAFTKV_LSM_DIR}" "${CMAKE_BINARY_DIR}/lsm-build" EXCLUDE_FROM_ALL)
-  target_link_libraries(raftkv_raft PUBLIC lsm)
-  target_compile_definitions(raftkv_raft PUBLIC RAFTK_HAVE_LSM=1)
-  message(STATUS "M6: lsm engine enabled from ${RAFTKV_LSM_DIR}")
-else()
-  message(WARNING "M6: lsm source not found at ${RAFTKV_LSM_DIR}; --log-engine=lsm will fail loudly")
-endif()
-
 add_executable(raftkv_raft_node src/main_raft_node.cpp)
 target_link_libraries(raftkv_raft_node PRIVATE raftkv_raft)
 
@@ -127,4 +118,19 @@ if(GTEST_INCLUDE_DIR AND GTEST_LIBRARY)
   add_test(NAME raftkv_raft COMMAND raftkv_raft_tests)
 else()
   message(WARNING "GTest not found under /usr/local; skipping raftkv_raft_tests")
+endif()
+
+# ---- M6.1 / M6.10 N4：lsm 引擎接线 ----
+# 放在文件末尾：lsm 子树的测试注册要被 cmake/lsm-wrapper 的 add_test 空实现吞掉，
+# 而该空实现会“漏”回父作用域，因此必须在我们自己的 add_test 全部登记之后再接线。
+# lsm 是独立仓库（~/lsm-kv），活工作区可能正被别的代理改动 ⇒ 只链接 `git archive <sha>`
+# pin 出来的副本，**不读活工作区**。找不到源码 ⇒ 不定义 RAFTK_HAVE_LSM：
+# `--log-engine=lsm` 明确报错退出，绝不静默降级。
+if(EXISTS "${RAFTKV_LSM_DIR}/CMakeLists.txt")
+  add_subdirectory(cmake/lsm-wrapper "${CMAKE_BINARY_DIR}/lsm-wrapper")
+  target_link_libraries(raftkv_raft PUBLIC lsm)
+  target_compile_definitions(raftkv_raft PUBLIC RAFTK_HAVE_LSM=1)
+  message(STATUS "M6: lsm engine enabled from ${RAFTKV_LSM_DIR}")
+else()
+  message(WARNING "M6: lsm source not found at ${RAFTKV_LSM_DIR}; --log-engine=lsm will fail loudly")
 endif()

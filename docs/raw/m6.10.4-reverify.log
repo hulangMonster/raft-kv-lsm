@@ -1,0 +1,51 @@
+# M6.10.4 final-tree re-verification (after the N1 diagnostic knob + N4 ctest fix)
+# tree: HEAD at time of run + N4 (cmake/lsm-wrapper) + N1 knob; lsm pin /tmp/lsm-pin-51c4672
+=== [1/4] full suite (build/) ===
+full_rc=0
+[  PASSED  ] 163 tests.
+=== [2/4] ASan ===
+asan_build=0 warn=0
+asan_rc=0 reports=0
+[  PASSED  ] 163 tests.
+=== [3/4] TSan ===
+tsan_build=0 warn=0
+canon_rc=0 warn=0 race=0
+nosupp_rc=66 warn=16 race=0
+=== [4/4] gates ===
+build=0 warn=0
+gates_rc=0
+mem membership rc=0
+raft_membership_fault: PASS (2 iterations)
+FAIL_SUM=1
+END 2026年 10月 02日 星期五 19:10:58 CST
+kill9_rc=0
+before kill -9: verify missing 0 OK (leader=3)
+after kill -9: verify missing 0 OK (new leader=2)
+kill9_verify: PASS
+REVERIFY_DONE
+
+## gate per-round detail (re-verify run; raft_e2e stopped the loop at the first failure)
+START 2026年 10月 02日 星期五 19:06:38 CST
+### PHASE A: --log-engine lsm --state-engine lsm
+e2e round 1 PASS
+e2e round 2 PASS
+e2e round 3 PASS
+e2e round 4 PASS
+e2e round 5 FAIL rc=1
+raft_fault rc=0
+raft_fault: PASS (10 iterations)
+raft_snapshot_fault rc=0
+raft_snapshot_fault: PASS
+raft_membership_fault rc=0
+raft_membership_fault: PASS (10 iterations)
+### PHASE B: --log-engine lsm --state-engine mem (2 rounds)
+mem e2e round 1 FAIL rc=1
+mem e2e round 2 PASS
+mem raft_fault rc=0
+raft_fault: PASS (2 iterations)
+mem snapshot rc=0
+raft_snapshot_fault: PASS
+mem membership rc=0
+raft_membership_fault: PASS (2 iterations)
+FAIL_SUM=1
+END 2026年 10月 02日 星期五 19:10:58 CST

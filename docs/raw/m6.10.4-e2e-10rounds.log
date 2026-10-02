@@ -1,0 +1,34 @@
+# M6.10.4 honest 10-round record, scripts/raft_e2e.sh AS-IS with --log-engine lsm --state-engine lsm
+# (no criteria change, no silent retry, no loop break: every round recorded)
+E2E lsm/lsm round 1 rc=0 PASS
+E2E lsm/lsm round 2 rc=0 PASS
+E2E lsm/lsm round 3 rc=0 PASS
+E2E lsm/lsm round 4 rc=0 PASS
+E2E lsm/lsm round 5 rc=1 FAIL
+E2E lsm/lsm round 6 rc=0 PASS
+E2E lsm/lsm round 7 rc=0 PASS
+E2E lsm/lsm round 8 rc=1 FAIL
+E2E lsm/lsm round 9 rc=0 PASS
+E2E lsm/lsm round 10 rc=0 PASS
+E2E_SUMMARY total=10 pass=8 fail=2
+E2E_DONE
+
+## attribution of the 2 failures via the diagnostic copy (prints FAIL_AT_LINE + PUT115 rc/out)
+diag round 1 rc=0 PASS 
+diag round 2 rc=0 PASS 
+diag round 3 rc=0 PASS 
+diag round 4 rc=0 PASS 
+diag round 5 rc=0 PASS 
+diag round 6 rc=1 FAIL PUT115 rc=1 out=[NOT_LEADER]
+diag round 7 rc=0 PASS 
+diag round 8 rc=0 PASS 
+diag round 9 rc=0 PASS 
+diag round 10 rc=0 PASS 
+diag round 11 rc=0 PASS 
+diag round 12 rc=0 PASS 
+
+## mechanism (unchanged from M6.9.3): the CLI put on repo-script line 115 returns NOT_LEADER
+## (leader-redirect budget exhausted inside a leadership window); under set -euo pipefail
+## out=$(...) aborts before the expect check, so the round log holds no PASS marker.
+## This is a pre-existing harness flake: three-arm rates 8.3% (pre-M6.9 original) /
+## 8.3% (this repo lsm/lsm) / 16.7% (this repo file/mem) -- see evidence Section M6.9-2.

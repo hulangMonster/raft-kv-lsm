@@ -1081,3 +1081,33 @@ TSan 159 = 163 − 4：`LsmCrash.*` 的 2 个与 `LsmApplyReopen.*` 的 2 个 fo
 - **RSS 未降**（读侧镜像，N-D）；**SM fsync 未合并进 group commit**。
 - **`raft_e2e.sh` 既有 flake 未修**（超出范围，按纪律原样登记）。
 - **M6.7 的 A/B 数字**仍是当时机器状态下的（`docs/m6-bench.md` 已注明 loadavg 4.7–15.9 的污染）；本轮三臂 A/B 是安静机器上的复测。
+
+### 7) 最终树复验（N1 诊断旋钮 + N4 ctest 修复之后）
+
+第一次验收跑在 `3cee68e`；此后为 N1 加了 `RAFTKV_LSM_WRITE_BUFFER_BYTES` 诊断旋钮、为 N4 改了构建接线，因此整条验收在**最终树**上重跑一遍（原始输出 `docs/raw/m6.10.4-reverify.log`）：
+
+| 判据 | 复验结果 |
+|---|---|
+| 全量（`build/`） | **163/163 PASS** |
+| ASan 全量 | **163/163；0 报告；0 warning** |
+| TSan canonical | **rc=0；0 warning；0 data race** |
+| TSan 无抑制 | **rc=66；16 条既有 warning；0 data race** |
+| Release 干净重建 | 0 warning / 0 error；163/163；M1 13/13 |
+| 四脚本 lsm/lsm | `raft_fault` 10/10、`raft_snapshot_fault` 10/10、`raft_membership_fault` 10/10；`raft_e2e` 该轮第 5 轮撞既有 flake（见 §7.2） |
+| kill -9 | 前后 `verify missing 0` |
+
+#### 7.1 N4 —— 父构建的 `ctest` 不再引用未构建的 lsm 测试
+
+- 问题：lsm 子工程用**裸 `enable_testing()` + `add_test(lsm_unit)`**（其 `CMakeLists.txt` 完全不读 `BUILD_TESTING`），而 `lsm_tests` 是 `EXCLUDE_FROM_ALL`（我们故意不构建）⇒ 父构建 `ctest -N` 报 `Could not find executable .../bin/lsm_tests`。
+- 已试且**无效**的父侧手段：`-DBUILD_TESTING=OFF`、`set_property(DIRECTORY ... PROPERTY TESTS "")`、`set_tests_properties(lsm_unit PROPERTIES DISABLED TRUE)` —— CTest 三种情况下都仍会解析该可执行文件。
+- 采用的等价手段：新增 `cmake/lsm-wrapper/CMakeLists.txt`，在其中把 `add_test` 定义成空实现，再 `add_subdirectory` 进 lsm 源码树（命令作用域只向下，**不修改 lsm 仓库**）；并把 lsm 接线整段移到根 `CMakeLists.txt` **末尾**，保证我们自己的 `add_test` 先登记（空实现会漏回父作用域，已实测确认）。
+- 验收（`docs/raw/m6.10.4-n4-ctest.log`）：修前 `ctest -N` = 3 tests + 1 条 `Could not find executable`；修后 **2 tests（`raftkv_unit`/`raftkv_raft`）+ 0 条**；`ctest` 实跑 **2/2 passed**；重建 **0 warning / 0 error**、全量 **163/163**（N4 只动测试注册，不动任何编译产物语义）。
+- 文档：`README.md` §1 给出「全新克隆 → `git -C ~/lsm-kv archive <sha> | tar -x -C /tmp/lsm-pin-<sha>` → `cmake -DRAFTKV_LSM_DIR=<pin>`」的一条可复现命令，并写死：**默认值指向活工作树 `~/lsm-kv` 只适合开发，不能用于出证据**；当前 pin = `51c4672`。
+
+#### 7.2 `raft_e2e` 照原样 ≥10 轮的诚实记录
+
+- 记录方式：**仓库脚本原样**（`scripts/raft_e2e.sh --log-engine lsm --state-engine lsm`），跑满 10 轮、不 break、不重试、不改判据（`docs/raw/m6.10.4-e2e-10rounds.log`）。
+- 结果：**8/10 PASS，2/10 FAIL**（第 5、8 轮）——与既有 flake 率（~10–25%）一致。
+- 归因（诊断副本，打印 `FAIL_AT_LINE` 与 `PUT115 rc/out`）：失败轮命中 `PUT115 rc=1 out=[NOT_LEADER]` —— 仓库脚本第 115 行 `put hello world` 在领导权切换窗口内耗尽 CLI 重定向预算（3 次 / 1s）而返回 `NOT_LEADER`；`set -euo pipefail` 下 `out=$(...)` 直接中止，`expect` 从未执行 ⇒ 该轮日志只剩 4 行、没有 PASS 标记。
+- 该 flake **不是 M6.10 引入**：三臂对照（§M6.9-2）M6.9 之前原版 8.3% / 本仓 lsm/lsm 8.3% / 本仓 file/mem 16.7%。
+- `raft_fault` / `raft_snapshot_fault` / `raft_membership_fault` 在两轮验收里（首轮与复验各 10 轮）**全绿**，未见 flake。

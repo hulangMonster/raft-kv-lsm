@@ -30,7 +30,11 @@ M6 把存储层适配到本项目的 lsm 引擎（`LsmLogStore`，默认仍是 `
 
 ```bash
 git clone <this-repo> && cd raft-kv
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+# 出证据/提交数字：必须固定 lsm 基座（见下方警告）
+PIN=/tmp/lsm-pin-51c4672                                  # 最终基座 = ~/lsm-kv @ 51c4672
+git -C ~/lsm-kv archive 51c4672 | tar -x -C "$PIN"
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DRAFTKV_LSM_DIR="$PIN"
 cmake --build build -j"$(nproc)"
 
 ls build/bin
@@ -38,6 +42,14 @@ ls build/bin
 # raftkv_raft_node  raftkv_raft_cli         # M2+ 集群版 + 客户端
 # raftkv_tests  raftkv_raft_tests           # 测试
 ```
+
+> **lsm 基座的可复现性（重要）**：`-DRAFTKV_LSM_DIR` 的默认值是活工作树 `~/lsm-kv`，
+> **只适合开发**（它随时可能被别的改动污染，且不记录身份）。**任何写进文档/提交/证据的数字，
+> 都必须在 `git -C ~/lsm-kv archive <sha> | tar -x -C /tmp/lsm-pin-<sha>` 出来的固定副本上重跑**，
+> 并在报告里写明 sha。本仓 M6.10 的全部数字来自 `-DRAFTKV_LSM_DIR=/tmp/lsm-pin-51c4672`
+> （lsm sha **`51c4672`**）；历次基座：`b1bd050`（M6.1–M6.6）→ `f06a44d`（M6.7–M6.9）→ `51c4672`（M6.10）。
+> 构建时 lsm 子树自己的 CTest 注册会被 `cmake/lsm-wrapper` 吞掉（它用裸 `enable_testing()`，
+> 且 `lsm_tests` 是 `EXCLUDE_FROM_ALL`），因此 `ctest -N` 只列本工程的 `raftkv_unit`/`raftkv_raft`。
 
 可选：Sanitizer 构建（与 Release 构建互不影响，用独立目录）
 

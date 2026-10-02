@@ -1,0 +1,53 @@
+# M6.10.4 N4: parent ctest no longer references the unbuilt lsm_tests
+
+## BEFORE (build/ reconfigured with the lsm tests leaking in):
+Test project /home/tengyujie/raft-kv-lsm/build
+  Test #1: raftkv_unit
+  Test #2: raftkv_raft
+Could not find executable /home/tengyujie/raft-kv-lsm/build/bin/lsm_tests
+Looked in the following places:
+/home/tengyujie/raft-kv-lsm/build/bin/lsm_tests
+/home/tengyujie/raft-kv-lsm/build/bin/lsm_tests
+/home/tengyujie/raft-kv-lsm/build/bin/Release/lsm_tests
+/home/tengyujie/raft-kv-lsm/build/bin/Release/lsm_tests
+/home/tengyujie/raft-kv-lsm/build/bin/Debug/lsm_tests
+/home/tengyujie/raft-kv-lsm/build/bin/Debug/lsm_tests
+/home/tengyujie/raft-kv-lsm/build/bin/MinSizeRel/lsm_tests
+/home/tengyujie/raft-kv-lsm/build/bin/MinSizeRel/lsm_tests
+/home/tengyujie/raft-kv-lsm/build/bin/RelWithDebInfo/lsm_tests
+/home/tengyujie/raft-kv-lsm/build/bin/RelWithDebInfo/lsm_tests
+/home/tengyujie/raft-kv-lsm/build/bin/Deployment/lsm_tests
+/home/tengyujie/raft-kv-lsm/build/bin/Deployment/lsm_tests
+/home/tengyujie/raft-kv-lsm/build/bin/Development/lsm_tests
+/home/tengyujie/raft-kv-lsm/build/bin/Development/lsm_tests
+home/tengyujie/raft-kv-lsm/build/bin/lsm_tests
+home/tengyujie/raft-kv-lsm/build/bin/lsm_tests
+home/tengyujie/raft-kv-lsm/build/bin/Release/lsm_tests
+home/tengyujie/raft-kv-lsm/build/bin/Release/lsm_tests
+home/tengyujie/raft-kv-lsm/build/bin/Debug/lsm_tests
+home/tengyujie/raft-kv-lsm/build/bin/Debug/lsm_tests
+home/tengyujie/raft-kv-lsm/build/bin/MinSizeRel/lsm_tests
+home/tengyujie/raft-kv-lsm/build/bin/MinSizeRel/lsm_tests
+home/tengyujie/raft-kv-lsm/build/bin/RelWithDebInfo/lsm_tests
+home/tengyujie/raft-kv-lsm/build/bin/RelWithDebInfo/lsm_tests
+home/tengyujie/raft-kv-lsm/build/bin/Deployment/lsm_tests
+home/tengyujie/raft-kv-lsm/build/bin/Deployment/lsm_tests
+home/tengyujie/raft-kv-lsm/build/bin/Development/lsm_tests
+home/tengyujie/raft-kv-lsm/build/bin/Development/lsm_tests
+  Test #3: lsm_unit
+
+Total Tests: 3
+
+## AFTER (cmake/lsm-wrapper swallows the lsm subproject add_test):
+Test project /home/tengyujie/raft-kv-lsm/build
+  Test #1: raftkv_unit
+  Test #2: raftkv_raft
+
+Total Tests: 2
+
+## ctest (run, not -N) on the AFTER tree:
+2/2 Test #2: raftkv_raft ......................   Passed   69.42 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Total Test time (real) =  69.48 sec
