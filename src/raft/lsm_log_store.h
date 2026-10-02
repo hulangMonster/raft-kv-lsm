@@ -73,7 +73,7 @@ class LsmLogStore : public LogStore {
     uint64_t appends = 0;            // append/appendNoSync 调用次数
     uint64_t appended_entries = 0;
     uint64_t syncs = 0;
-    uint64_t truncates = 0;          // truncateSuffix/NoSync 调用次数
+    uint64_t truncates = 0;          // 实际删除条目的 truncate 次数（E1-E4 no-op 不计；M6.10 N9 口径）
     uint64_t truncated_entries = 0;  // 被删除的索引条数（R3 的写放大口径）
     uint64_t compacts = 0;
     uint64_t compacted_entries = 0;

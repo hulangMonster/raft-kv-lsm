@@ -457,8 +457,8 @@ bool LsmLogStore::truncateLocked(Index fromIndex, bool flush) {
   if (fromIndex == kNoIndex) return true;          // E1: no-op
   if (fromIndex <= lastIncluded_) return false;    // E2: 不能切到边界以下
   if (fromIndex > lastIndex_ + 1) return false;    // E3: 越界
-  stat_truncates_.fetch_add(1);
-  if (fromIndex <= lastIndex_) {                   // E4: == lastIndex_+1 ⇒ 无条目可删，直接 true
+  if (fromIndex <= lastIndex_) {                   // E4: == lastIndex_+1 ⇒ 无条目可删，直接 true（不计入 truncates）
+    stat_truncates_.fetch_add(1);                  // M6.10 N9：只统计**真的删了条目**的 truncate
     const size_t keep = static_cast<size_t>(fromIndex - firstIndexLocked());
     if (keep >= terms_.size()) return false;       // 内部不变量破坏（不应发生）
     if (!deleteRangeLocked(fromIndex, lastIndex_, flush)) return false;  // E5/E6/E7
@@ -590,12 +590,18 @@ void LsmLogStore::setBoundary(Index lastIncludedIndex, Term lastIncludedTerm) {
   if (drop > 0) {
     terms_.erase(terms_.begin(), terms_.begin() + static_cast<ptrdiff_t>(drop));
   }
-  // FileLogStore 的 lastIndex() 在 entries_ 清空后回落到 lastIncluded_；这里等价维护。
-  if (lastIndex_ < lastIncluded_) {
+  // M6.10 N2：setBoundary 可能把边界**向后**移动（生产唯一调用点在构造期，故不可达；
+  // 但 17 方法必须逐项等价）。FileLogStore 的 lastIndex() 完全由 entries_ 推导：
+  //   entries_.empty() ? lastIncluded_ : entries_.back().index
+  // 这里按同一推导重算 lastIndex_/lastTerm_。旧写法在「terms_ 已空 + 边界后移」时
+  // 会把 lastIndex_ 停在旧值，termAt()/slice() 进而对空的 terms_ 越界索引（评审复现）。
+  if (terms_.empty()) {
     lastIndex_ = lastIncluded_;
     lastTerm_ = lastIncludedTerm_;
-  } else if (lastIndex_ == lastIncluded_) {
-    lastTerm_ = lastIncludedTerm_;
+  } else {
+    // 保留后缀 terms_[j] 的绝对索引 = oldFirst + drop + j（drop = 本次删掉的前缀条数）
+    lastIndex_ = oldFirst + drop + static_cast<Index>(terms_.size()) - 1;
+    lastTerm_ = terms_.back();
   }
 }
 

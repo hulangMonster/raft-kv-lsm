@@ -558,10 +558,18 @@ int main(int argc, char** argv) {
     // M5.3（L15）：显式停止 reactor（停事件循环 + join + 丢弃在途回调），避免
     // detached 连接线程/回调触及即将失效的对象。
     if (reactorTransport) reactorTransport->stop();
-    // M6.9: graceful durability point for the lsm state machine. The process
-    // exits via _Exit below (stack destructors never run), so this is the only
-    // graceful Sync; a crash still recovers by replaying the durable log.
-    if (lsmSm != nullptr) (void)lsmSm->sync();
+    // M6.9/M6.10: graceful durability point for the lsm state machine. This
+    // process exits via std::_Exit(0) below, so stack destructors (including
+    // DB::Close()) do NOT run. IF this sync succeeds, the lsm WAL is durable;
+    // if the process is killed before this point, recovery relies on the engine
+    // replaying the WAL (not on Close()). Note the known lsm flush/Close race
+    // (docs/raw/m6.10.1-BLOCKER-lsm-flush-close.md): a kill during an in-flight
+    // memtable flush can still leave the DB unrecoverable on the current pin.
+    if (lsmSm != nullptr) {
+      if (!lsmSm->sync()) {
+        std::cerr << "[raftkv-node] warning: LsmKvStateMachine::sync failed on shutdown\n";
+      }
+    }
     std::cerr << "[raftkv-node] id=" << id << " shutdown\n";
   } catch (const std::exception& e) {
     std::cerr << "fatal: " << e.what() << "\n";
