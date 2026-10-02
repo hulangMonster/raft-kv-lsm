@@ -1,0 +1,448 @@
+# M6.10.5 (8) raft_e2e.sh flake —— 聚焦探针 + 整脚本 sanity 原始输出
+# 修前脚本留档: docs/raw/m6.10.5-e2e-before.sh (= ccabc70 的 scripts/raft_e2e.sh；本项之前未改过)
+
+## A) 静默机器（对照：证明静默条件下探针没有区分力）
+# 只贴汇总行；逐轮 PROBE 行省略（各 100/200 行，全部 out=[OK] attempts=1）
+PROBE_SUMMARY mode=raw rounds=100 pass=100 fail=0
+PROBE_SUMMARY mode=retry rounds=200 pass=200 fail=0
+
+## B) 6 个 CPU 占满 —— raw(原样) 80 轮 + retry(补丁后) 200 轮
+# load comparison hogs=6 raw=80 retry=200 loadavg=1.88 1.36 1.50
+# first-put probe bin=/home/tengyujie/raft-kv-lsm/build/bin rounds=80 mode=raw log=lsm state=lsm
+# 2026-10-02T20:09:36+08:00 uname=Linux 6.8.0-138-generic nproc=8 load=1.88
+PROBE mode=raw round=1 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 283452 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=2 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=3 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 283566 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=4 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 283624 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=5 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 283698 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=6 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 283754 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=7 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=8 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 283866 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=9 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=10 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 283968 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=11 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=12 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 284080 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=13 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=14 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 284182 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=15 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=16 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 284279 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=17 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=18 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=19 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=20 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=21 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=22 rc=1 out=[NOT_LEADER] attempts=1 FAIL
+PROBE mode=raw round=23 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 284600 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=24 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=25 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=26 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=27 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 284799 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=28 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=29 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 284906 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=30 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=31 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=32 rc=1 out=[NOT_LEADER] attempts=1 FAIL
+scripts/raft_e2e_first_put_probe.sh: line 29: 285054 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=33 rc=1 out=[NOT_LEADER] attempts=1 FAIL
+PROBE mode=raw round=34 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 285144 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=35 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=36 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 285246 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=37 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=38 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=39 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 285384 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=40 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=41 rc=1 out=[NOT_LEADER] attempts=1 FAIL
+scripts/raft_e2e_first_put_probe.sh: line 29: 285496 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=42 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=43 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=44 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 285644 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=45 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=46 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 285746 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=47 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=48 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=49 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=50 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=51 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 286016 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=52 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=53 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 286130 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=54 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=55 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 286227 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=56 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=57 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=58 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=59 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 286431 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=60 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 286477 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=61 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=62 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=63 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=64 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=65 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 286722 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=66 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=67 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=68 rc=1 out=[NOT_LEADER] attempts=1 FAIL
+PROBE mode=raw round=69 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=70 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=71 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=72 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=73 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 287106 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=74 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=75 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 287198 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=76 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=77 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 287300 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=78 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=raw round=79 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 287402 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=raw round=80 rc=0 out=[OK] attempts=1 PASS
+PROBE_SUMMARY mode=raw rounds=80 pass=75 fail=5
+[FIRST_PUT_PROBE_FAIL] mode=raw
+# first-put probe bin=/home/tengyujie/raft-kv-lsm/build/bin rounds=200 mode=retry log=lsm state=lsm
+# 2026-10-02T20:10:06+08:00 uname=Linux 6.8.0-138-generic nproc=8 load=4.00
+PROBE mode=retry round=1 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=2 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=3 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 287613 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=4 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 287659 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=5 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 287705 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=6 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=7 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 287812 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=8 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=9 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=10 rc=0 out=[OK] attempts=2 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 287975 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=11 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=12 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=13 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 288131 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=14 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=15 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=16 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 288284 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=17 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 288330 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=18 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=19 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 288437 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=20 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=21 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=22 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=23 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 288634 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=24 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=25 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 288746 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=26 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 288792 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=27 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=28 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 288904 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=29 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 288955 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=30 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=31 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=32 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=33 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 289141 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=34 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=35 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 289243 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=36 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=37 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=38 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=39 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=40 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=41 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=42 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 289595 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=43 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=44 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=45 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=46 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=47 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=48 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=49 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=50 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=51 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=52 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 290074 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=53 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=54 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=55 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=56 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 290271 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=57 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 290317 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=58 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=59 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 290423 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=60 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 290469 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=61 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=62 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 290561 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=63 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=64 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=65 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=66 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=67 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=68 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=69 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=70 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=71 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=72 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=73 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=74 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=75 rc=0 out=[OK] attempts=2 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 291206 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=76 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 291256 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=77 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=78 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 291348 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=79 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 291394 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=80 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=81 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=82 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=83 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=84 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=85 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=86 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=87 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 291807 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=88 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=89 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 291903 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=90 rc=0 out=[OK] attempts=2 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 291959 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=91 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=92 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 292059 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=93 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=94 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 292166 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=95 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 292222 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=96 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 292278 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=97 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 292334 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=98 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 292390 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=99 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=100 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 292497 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=101 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=102 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=103 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 292649 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=104 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 292700 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=105 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=106 rc=0 out=[OK] attempts=2 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 292792 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=107 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=108 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 292898 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=109 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=110 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=111 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=112 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 293104 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=113 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 293150 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=114 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=115 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=116 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 293292 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=117 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=118 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 293384 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=119 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 293430 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=120 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=121 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=122 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=123 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 293629 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=124 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 293675 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=125 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 293726 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=126 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 293772 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=127 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=128 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 293874 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=129 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=130 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 293976 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=131 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 294022 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=132 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 294068 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=133 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=134 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 294160 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=135 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 294206 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=136 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=137 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=138 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=139 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 294390 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=140 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 294436 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=141 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=142 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=143 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=144 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=145 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=146 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 294732 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=147 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 294788 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=148 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=149 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 294890 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=150 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=151 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 294982 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=152 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 295033 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=153 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=154 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=155 rc=0 out=[OK] attempts=2 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 295175 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=156 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 295225 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=157 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 295281 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=158 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=159 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 295378 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=160 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=161 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 295490 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=162 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=163 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 295596 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=164 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 295651 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=165 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=166 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=167 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 295814 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=168 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=169 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 295916 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=170 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=171 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 296018 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=172 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 296074 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=173 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 296120 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=174 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=175 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 296212 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=176 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=177 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=178 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=179 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=180 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 296447 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=181 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=182 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=183 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=184 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=185 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=186 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=187 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 296803 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=188 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 296849 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=189 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=190 rc=0 out=[OK] attempts=2 PASS
+PROBE mode=retry round=191 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 296996 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=192 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 297047 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=193 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=194 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 297139 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=195 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=196 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 297251 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=197 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 297307 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=198 rc=0 out=[OK] attempts=1 PASS
+PROBE mode=retry round=199 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 297419 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE mode=retry round=200 rc=0 out=[OK] attempts=1 PASS
+scripts/raft_e2e_first_put_probe.sh: line 29: 297470 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$port" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" > "$WORK/node$id.log" 2>&1
+PROBE_SUMMARY mode=retry rounds=200 pass=200 fail=0
+[FIRST_PUT_PROBE_OK] mode=retry
+/tmp/load_cmp.sh: line 16: 283433 Killed                  ( while :; do
+    :;
+done )  (wd: ~)
+/tmp/load_cmp.sh: line 16: 283434 Killed                  ( while :; do
+    :;
+done )  (wd: ~)
+/tmp/load_cmp.sh: line 16: 283435 Killed                  ( while :; do
+    :;
+done )  (wd: ~)
+/tmp/load_cmp.sh: line 16: 283436 Killed                  ( while :; do
+    :;
+done )  (wd: ~)
+/tmp/load_cmp.sh: line 16: 283437 Killed                  ( while :; do
+    :;
+done )  (wd: ~)
+/tmp/load_cmp.sh: line 16: 283438 Killed                  ( while :; do
+    :;
+done )  (wd: ~)
+
+## C) 整脚本 sanity（补丁后，6 个 CPU 占满，12 轮）
+# e2e sanity (patched script) rounds=12 hogs=6 loadavg=0.80 1.83 1.79
+SANITY round=1 rc=0 PASS
+SANITY round=2 rc=0 PASS
+SANITY round=3 rc=0 PASS
+SANITY round=4 rc=0 PASS
+SANITY round=5 rc=0 PASS
+SANITY round=6 rc=0 PASS
+SANITY round=7 rc=0 PASS
+SANITY round=8 rc=0 PASS
+SANITY round=9 rc=0 PASS
+SANITY round=10 rc=0 PASS
+SANITY round=11 rc=0 PASS
+SANITY round=12 rc=0 PASS
+SANITY_SUMMARY rounds=12 pass=12 fail=0

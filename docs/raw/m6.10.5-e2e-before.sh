@@ -108,41 +108,10 @@ expect() {
   fi
 }
 
-# ---- M6.10.5 (8) harness patch (outside the M6 criteria) -----------------------
-# Symptom: `wait_leader` returns while leadership is still settling, so the FIRST
-# client call has to discover the leader itself. When the CLI's redirect budget
-# (3 tries / 1s) is exhausted inside that window it returns NOT_LEADER (non-zero),
-# and under `set -euo pipefail` the `out=$(...)` assignment aborts the whole
-# script before `expect` ever runs -- the failing round's log holds only 4 lines
-# and no PASS marker.
-# Attribution: engine-independent three-arm rates 8.3% (pre-M6.9 original) /
-# 8.3% (this repo lsm/lsm) / 16.7% (this repo file/mem); the diagnostic copy
-# always captured the signature `PUT115 rc=1 out=[NOT_LEADER]`.
-# Fix: a BOUNDED retry for this one put, and ONLY on NOT_LEADER (any other error
-# is returned immediately, so a genuine unavailability is never masked). No check
-# is weakened: the final output still has to be OK and `expect` still runs.
-PUT_RETRY_MAX=8        # at most 8 attempts (including the first)
-PUT_RETRY_SLEEP=0.25   # 0.25s between attempts => ~2s upper bound, far below wait_leader's 20s
-first_put() {          # <port> <key> <value>: echoes the reply; retries leadership errors only
-  local port="$1" key="$2" val="$3" out="" i
-  for ((i = 1; i <= PUT_RETRY_MAX; ++i)); do
-    if out="$(cli --host 127.0.0.1 --port "$port" put "$key" "$val" 2>&1)"; then
-      printf '%s' "$out"; return 0
-    fi
-    case "$out" in
-      *NOT_LEADER*) sleep "$PUT_RETRY_SLEEP";;
-      *) printf '%s' "$out"; return 1;;
-    esac
-  done
-  printf '%s' "$out"; return 1
-}
-# -------------------------------------------------------------------------------
-
 for id in 1 2 3; do start_node "$id"; done
 wait_leader
 
-out="$(first_put "$PORT1" hello world)" || { echo "FAIL: put hello world rejected after $PUT_RETRY_MAX attempts" >&2; exit 1; }
-expect "$out" "OK" "put hello"
+out=$(cli --host 127.0.0.1 --port "$PORT1" put hello world); expect "$out" "OK" "put hello"
 out=$(cli --host 127.0.0.1 --port "$PORT2" get hello);   expect "$out" "world" "get hello"
 out=$(cli --host 127.0.0.1 --port "$PORT3" put hello raft); expect "$out" "OK" "overwrite hello"
 out=$(cli --host 127.0.0.1 --port "$PORT1" get hello);   expect "$out" "raft" "get overwritten"

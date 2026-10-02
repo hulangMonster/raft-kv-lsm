@@ -1146,3 +1146,36 @@ TSan 159 = 163 − 4：`LsmCrash.*` 的 2 个与 `LsmApplyReopen.*` 的 2 个 fo
 
 **复跑**：`scripts/raft_two_compactions.sh --rounds 6`（默认 64 KiB memtable，`--write-buffer-bytes` 可调）；
 store 级用例 `--gtest_filter=RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction`。
+
+### M6.10.5 加固（8）`raft_e2e.sh` 既有 flake：harness 补丁（**M6 口径之外**）
+
+**根因（M6.9 已取证，本轮再次复现）**：`wait_leader` 在领导权刚收敛时即返回，客户端**第一次**调用需要自己
+发现 leader；CLI 的重定向预算（3 次 / 1s）在该窗口内耗尽后返回 `NOT_LEADER`（非 0），而
+`set -euo pipefail` 下 `out=$(...)` 会**直接中止整个脚本**，`expect` 从不执行 ⇒ 失败轮日志只剩 4 行、无 PASS 标记。
+
+**补丁**（`scripts/raft_e2e.sh`，只改这一处；常量 `PUT_RETRY_MAX=8` / `PUT_RETRY_SLEEP=0.25` 并在注释里说明）：
+只对**这一次** put 做**有界重试**，且**只在 `NOT_LEADER` 上重试** —— 其它错误立即上抛；最终输出仍必须是
+`OK`，`expect` 照常执行。**判据没有被放宽**：没有 `|| true`、没有减少轮次、没有跳过任何断言。
+修前脚本留档：`docs/raw/m6.10.5-e2e-before.sh`（= `ccabc70` 的 `scripts/raft_e2e.sh`；本项之前该文件未被改过）。
+
+**聚焦探针** `scripts/raft_e2e_first_put_probe.sh`：只跑「起 3 节点 → wait_leader → 首次 put」这条路径
+（不跑整脚本），`--mode raw` 复刻原样逻辑、`--mode retry` 复刻补丁后的逻辑。
+
+| 条件 | 模式 | 轮数 | 结果 |
+|---|---|---|---|
+| **静默机器** | raw（原样） | 100 | 100 PASS / **0 FAIL** ← **空绿：窗口太窄，复现不出来** |
+| 静默机器 | retry（补丁后） | 200 | 200 PASS / 0 FAIL，`attempts=1` × **200**（重试从未触发 ⇒ 同样不构成证据） |
+| **6 个 CPU 占满** | raw（原样） | 80 | 75 PASS / **5 FAIL（6.25%）**，失败全部 `out=[NOT_LEADER]` |
+| **6 个 CPU 占满** | retry（补丁后） | 200 | **200 PASS / 0 FAIL**：`attempts=1` × 176、**`attempts=2` × 24** |
+
+第 4 行才是**真正的因果证据**：在能把原样逻辑打挂的同一负载下，补丁后的重试路径**真的触发了 24 次（12%）**
+且每次都恢复到 `OK` —— 而不是"重试根本没被用到，所以看着是绿的"。
+这也顺带说明：**静默机器上的 0 fail 不能用来证明这个 flake 被修好了**（本项最初就是先撞到这个空绿）。
+
+**整脚本 sanity**（补丁后，同样 6 个 CPU 占满）：**12/12 PASS，0 fail**。
+
+**修前失败率（保留，未改判据）**：三臂对照 8.3%（M6.9 之前原版 `1463620`）/ 8.3%（本仓 lsm/lsm）/
+16.7%（本仓 file/mem）；本轮同负载实测原样逻辑 5/80 = 6.25%，同量级。
+
+**结论**：该 flake 是**负载敏感**的领导权窗口竞态（静默机器 100 轮也复现不出）；补丁只在该窗口内做
+有界重试，不放宽任何判据。原始输出：`docs/raw/m6.10.5-e2e-probe.log`。

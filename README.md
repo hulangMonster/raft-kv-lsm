@@ -120,6 +120,8 @@ $CLI                                       # 不带命令 = 交互 REPL（put/ge
 ./scripts/raft_membership_e2e.sh                   # 3→4 在线增删 + 线性一致读
 ./scripts/raft_membership_fault.sh --repeat 50     # 5 节点 + 变更窗口内 kill -9/SIGSTOP
 ./scripts/raft_two_compactions.sh                 # M6.10.5(2)：raft 前缀压缩 × lsm 后台 compaction（64 KiB memtable 逼出后台 compaction；正向标记 lsm_compaction_rounds/snapshot_index；kill -9 后 missing 0）
+./scripts/raft_two_compactions.sh                 # M6.10.5(2)：raft 前缀压缩 × lsm 后台 compaction（64 KiB memtable 逼出后台 compaction；正向标记 lsm_compaction_rounds/snapshot_index；kill -9 后 missing 0）
+./scripts/raft_e2e_first_put_probe.sh            # M6.10.5(8)：raft_e2e 既有 flake 的聚焦探针（起集群→等 leader→首次 put；--mode raw|retry，可配 --rounds）
 ./scripts/e2e.sh                                   # M1 冒烟 + WAL 崩溃恢复
 ```
 
