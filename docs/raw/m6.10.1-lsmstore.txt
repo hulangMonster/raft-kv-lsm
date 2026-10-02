@@ -1,0 +1,4 @@
+# existing LsmLogStore exposure: append(3 x 5MiB) -> Close -> reopen
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  LsmLogStore: lsm DB::Open(/tmp/lsmstore_104660/raft-lsm) failed: Corruption: VersionSet::RecoverManifest: 元数据缺失但目录非空（*.sst 或 MANIFEST-*）: /tmp/lsmstore_104660/raft-lsm
+bash: line 15: 104660 Aborted                 (core dumped) /tmp/lsmstore_reopen 5 2>&1

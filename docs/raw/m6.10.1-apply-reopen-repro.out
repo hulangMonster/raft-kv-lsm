@@ -1,0 +1,13 @@
+# M6.10.1 BLOCKER - raw output of the apply-large-value-then-reopen pattern
+# source: docs/raw/m6.10.1-apply-reopen-repro.cpp (standalone)
+# captured from the gtest LsmRestore.ApplyLargeValueChunksAndSurvivesReopen
+# (now parked; see tests/raft_lsm_restore_test.cpp comment), 10x probe rounds 1-8.
+
+[ RUN      ] LsmRestore.MultiEntryPayloadOver64MiBRestoresInManyBatches
+[ RUN      ] LsmRestore.SingleHugeValueRestoresAcrossChunks
+[ RUN      ] LsmRestore.Exactly64MiBPayloadRestores
+[ RUN      ] LsmRestore.OverOneChunkBelow64MiBRestores
+[ RUN      ] LsmRestore.RepeatedRestoreIsIdempotent
+[ RUN      ] LsmRestore.ApplyLargeValueChunksAndSurvivesReopen
+C++ exception with description "LsmKvStateMachine: lsm DB::Open(/tmp/raftkv_restore_test_104566_5/kv-lsm) failed: Corruption: VersionSet::RecoverManifest: 元数据缺失但目录非空（*.sst 或 MANIFEST-*）: /tmp/raftkv_restore_test_104566_5/kv-lsm" thrown in the test body.
+[  FAILED  ] LsmRestore.ApplyLargeValueChunksAndSurvivesReopen (191 ms)

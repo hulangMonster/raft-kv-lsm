@@ -1,0 +1,6 @@
+# raw lsm matrix (no raft-kv code): Open -> batch(2MiB)x2 -> Close -> Open
+mb=2 count=2 sleep=0 wbuf=4 get=0 -> open2 ok=0 Corruption: VersionSet::RecoverManifest: 元数据缺失但目录非空（*.sst 或 MANIFEST-*）: /tmp/raw_lsm2_104620
+mb=2 count=2 sleep=1500 wbuf=4 get=0 -> open2 ok=1 
+mb=2 count=4 sleep=0 wbuf=4 get=0 -> open2 ok=1 
+mb=2 count=2 sleep=0 wbuf=256 get=0 -> open2 ok=1 
+mb=2 count=2 sleep=0 wbuf=4 get=1 -> open2 ok=0 Corruption: VersionSet::RecoverManifest: 元数据缺失但目录非空（*.sst 或 MANIFEST-*）: /tmp/raw_lsm2_104647

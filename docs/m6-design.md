@@ -1434,3 +1434,39 @@ C10–C15 之外的一切改动都需要父代理裁决。
 |---|---|---|
 | `fatal error: kv/lsm_kv_state_machine.h: No such file`（`docs/raw/m6.9.1-red-compile.log`） | (a) LSM 版缺失 | 正常，M6.9.2 实现后消失 |
 | `KvStateMachineContract.IdempotentHigherIndexAdvancesApplied`（`docs/raw/m6.9.1-red-mem-contract.log`） | (b) 实为测试侧过度断言 | 按 m2-design §6.5 改测试（见上），mem 基线不动 |
+
+
+### 10.15 M6.10.1 修订：restore 的分块原子替换与超大值（B1）
+
+**触发（评审 B1）**：`restore()` 把整个差量一次 `WriteBatch` 写盘；lsm 的 `WriteBatch::kMaxBytes = 64 MiB`、`kMaxCount = 2^20`，>64 MiB 的载荷直接 `kInvalidArgument`。而 `raft_node.cpp` 的 InstallSnapshot 是先 `truncateSuffixNoSync` 再 `restore`，restore 失败后 follower 永远追不上（liveness，非 Raft 安全）。此外单个值 >64 MiB 连 `DB::Put` 都存不下（`wal.h: kMaxLogicalRecordSize = 64 MiB`）。
+
+**方案：双命名空间 + 值分块 + 单键指针提交**（不改 `raft_node.cpp`、不改快照载荷格式）。
+
+键布局（内部格式，非协议；`nsb` 为命名空间字节 0x11/0x12）：
+
+| key | value |
+|---|---|
+| `0x00 "ns"` | BE64(当前命名空间 ∈ {0,1})，缺省 0 |
+| `0x00 "pending"` | BE64(目标命名空间)，仅 restore 期间存在 |
+| `nsb 0x00` | BE64(lastApplied) |
+| `nsb 0x01 <userKey>` | 内联值（<= 1 MiB） |
+| `nsb 0x02 <BE64(cid)>` | BE64(rid) |
+| `nsb 0x04 <userKey>` | BE64(valueId) BE64(totalLen) BE32(chunkCount) |
+| `nsb 0x03 <userKey><BE64(valueId)><BE32(i)>` | 第 i 块（<= 4 MiB） |
+
+常量：`kInlineValueMax=1 MiB`、`kValueChunkSize=4 MiB`、`kMaxOpsPerBatch=4096`、`kMaxBytesPerBatch=8 MiB`（与 `LsmLogStore` 同量级）。
+
+**restore 步骤与可见性**：① 清空 target 命名空间（上次中断残留）；② 写 `pending=target`；③ 把完整新状态按 <=4096 ops / <=8 MiB 分批写入 target（大值拆 <=4 MiB chunk + header，**无 header 不可见**）；④ **提交点**：一个 `WriteBatch` 同时写 `applied(target)=la`、`ns=target`、删 `pending`（一条 WAL record，原子）；⑤ 提交成功后才替换内存 mirror 与 `ns_`；⑥ best-effort 清旧命名空间，崩溃由启动 GC 兜底。
+
+**崩溃 / 失败语义（收敛证明）**：
+- 崩在 ①–③：`ns` 未变 -> 旧命名空间完整（data/dedup/applied 同属旧 ns）-> 读到的必然是旧状态；target 为垃圾，启动 `gcNonCurrentNamespace()` 删除非当前 ns 的所有 key。**不可能出现「数据在、去重表丢」**。
+- 崩在 ④ 之后：`ns=target`，而 target 在 ③ 已写全 -> 新状态完整。
+- 崩在 ⑥：`ns` 指向新状态，旧 ns 为垃圾 -> 启动 GC 清理。
+- **重入幂等**：每次 restore 都把完整状态写入 target 再翻转，重复调用收敛到同一状态。
+- **`lastApplied` 推进时机**：只在 ④ 提交批次落盘、只在 ⑤ 后对读路径可见，绝不早于全量数据 + 去重表。
+
+**`apply` 的超大值与原子性**：值 >1 MiB 时先写 chunk（无 header -> 不可见），再在**一个** `WriteBatch` 里写 header + dedup + applied（提交）；旧值 >阈值时同批覆盖/删除旧 header，旧 chunk 提交后 best-effort 删除（孤儿 chunk 启动/下次 restore 回收）。因此「数据可见 + 去重 + applied」仍是一次原子提交。
+
+**兼容性**：状态机 lsm DB 的内部格式 v2。v1（M6.9）的 `0x01/0x02/0x00` key 不属于任何命名空间，启动 GC 当垃圾删除；由于状态机可由 durable 日志 + 快照确定性重建，删除旧格式不丢正确性，只是一次重建。
+
+**已知阻塞（M6.10.1 BLOCKER，未修）**：lsm 引擎 flush 与 Close/kill -9 竞态会留下孤儿 `*.sst`（无 MANIFEST），`DB::Open` 直接 Corruption；既有 `LsmLogStore` 同样受影响。因此「apply 一个大值后立即 Close->reopen」在当前 lsm 基座下确定性失败，本里程碑**不宣布该项通过**，详见 `docs/raw/m6.10.1-BLOCKER-lsm-flush-close.md`。restore 路径的重开用例当前通过，但在该竞态下不保证长期稳定。

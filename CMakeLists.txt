@@ -105,6 +105,7 @@ if(GTEST_INCLUDE_DIR AND GTEST_LIBRARY)
     tests/raft_idempotent_test.cpp
     tests/raft_sm_contract_test.cpp
     tests/raft_lsm_state_machine_test.cpp
+    tests/raft_lsm_restore_test.cpp
     tests/raft_restart_test.cpp
     tests/raft_snapshot_test.cpp
     tests/raft_membership_test.cpp

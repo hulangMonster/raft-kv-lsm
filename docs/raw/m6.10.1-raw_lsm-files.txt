@@ -1,0 +1,7 @@
+open1 ok=1
+dir after Close:
+  000001.log 2097627
+  000002.log 2097627
+  LOCK 0
+  000003.sst 2097375
+open2 ok=0 Corruption: VersionSet::RecoverManifest: 元数据缺失但目录非空（*.sst 或 MANIFEST-*）: /tmp/raw_fail_demo
