@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "kv/kv_state_machine.h"
+#include "kv/lsm_kv_state_machine.h"
 #include "raft/clock.h"
 #include "raft/lock_probe.h"
 #include "raft/log_store.h"
@@ -270,7 +271,7 @@ void usage(const char* argv0) {
   std::cerr << "usage: " << argv0
            << " [--group-linger-us N] [--inflight-per-peer N]"
             << " --id N --port P --peers \"1=host:port,...\""
-            << " [--data-dir DIR] [--log-engine file|lsm]\n";
+            << " [--data-dir DIR] [--log-engine file|lsm] [--state-engine mem|lsm]\n";
 }
 
 }  // namespace
@@ -305,6 +306,8 @@ int main(int argc, char** argv) {
   // M6.1：日志引擎（--log-engine=file|lsm / RAFTK_LOG_ENGINE），**默认 file**。
   // file = M2-M5 的既有实现（逐字节不变）；lsm = M6 新增的 LsmLogStore（设计 §2）。
   std::string logEngine = "file";
+  // M6.9: state-machine engine (mem|lsm / RAFTK_STATE_ENGINE), default mem.
+  std::string stateEngine = "mem";
 
   for (int i = 1; i < argc; ++i) {
     const std::string a = argv[i];
@@ -357,6 +360,10 @@ int main(int argc, char** argv) {
       logEngine = a.substr(std::string("--log-engine=").size());
     } else if (a == "--log-engine") {
       logEngine = next("--log-engine");
+    } else if (a.rfind("--state-engine=", 0) == 0) {
+      stateEngine = a.substr(std::string("--state-engine=").size());
+    } else if (a == "--state-engine") {
+      stateEngine = next("--state-engine");
     } else {
       usage(argv[0]);
       return 2;
@@ -374,6 +381,15 @@ int main(int argc, char** argv) {
   if (logEngine != "file" && logEngine != "lsm") {
     std::cerr << "unknown --log-engine: " << logEngine
               << " (expected file|lsm)\n";
+    return 2;
+  }
+
+  // M6.9: --state-engine=mem|lsm + RAFTK_STATE_ENGINE (default mem). Unknown
+  // values exit loudly; never silently fall back to another engine.
+  if (const char* envS = ::getenv("RAFTKV_STATE_ENGINE")) stateEngine = envS;
+  if (stateEngine != "mem" && stateEngine != "lsm") {
+    std::cerr << "unknown --state-engine: " << stateEngine
+              << " (expected mem|lsm)\n";
     return 2;
   }
 
@@ -410,7 +426,17 @@ int main(int argc, char** argv) {
     // M6.r2：lsm 臂才接统计（只读；不进任何判定路径）。
     g_lsmStore = dynamic_cast<LsmLogStore*>(logStore.get());
     FileSnapshotStore snapshots(dataDir);  // M3.4: durable snapshots
-    KvStateMachine sm;
+    // M6.9: state-machine backend. mem = M2-M6.8 implementation (default,
+    // zero behaviour change); lsm = LsmKvStateMachine at <data-dir>/kv-lsm.
+    std::unique_ptr<StateMachine> stateMachine;
+    if (stateEngine == "lsm") {
+      stateMachine = std::make_unique<LsmKvStateMachine>(dataDir);
+    } else {
+      stateMachine = std::make_unique<KvStateMachine>();
+    }
+    StateMachine& sm = *stateMachine;
+    LsmKvStateMachine* lsmSm = dynamic_cast<LsmKvStateMachine*>(stateMachine.get());
+    std::cerr << "[raftkv-node] state-engine=" << stateEngine << std::endl;
     SteadyClock clock;
     // M5.3：transport 引擎可切换（--transport=reactor|sync 或 RAFKV_TRANSPORT 环境变量）。
     //   sync     = 旧的同步阻塞实现（每 RPC 建连 + 全局锁），作为对照与回退路径
@@ -532,6 +558,10 @@ int main(int argc, char** argv) {
     // M5.3（L15）：显式停止 reactor（停事件循环 + join + 丢弃在途回调），避免
     // detached 连接线程/回调触及即将失效的对象。
     if (reactorTransport) reactorTransport->stop();
+    // M6.9: graceful durability point for the lsm state machine. The process
+    // exits via _Exit below (stack destructors never run), so this is the only
+    // graceful Sync; a crash still recovers by replaying the durable log.
+    if (lsmSm != nullptr) (void)lsmSm->sync();
     std::cerr << "[raftkv-node] id=" << id << " shutdown\n";
   } catch (const std::exception& e) {
     std::cerr << "fatal: " << e.what() << "\n";

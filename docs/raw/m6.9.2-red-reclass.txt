@@ -1,0 +1,10 @@
+# M6.9.2 - RED reclassification (parent rule 2b): the mem-leg 'failure' was
+# test-side over-assertion, not a baseline defect.
+# authoritative contract: docs/m2-design.md 6.5 -> 'requestId <= lastRequestId'
+#   => 'directly discard'; src/raft/state_machine.h only requires apply() to be
+#   idempotent per (clientId, requestId). No contract line requires the derived
+#   SM watermark to advance on a discarded duplicate.
+# action: renamed the assertion to IdempotentHigherIndexKeepsData (data unchanged
+#   AND lastApplied stays 1); src/kv/kv_state_machine.cpp is byte-identical to HEAD
+#   (git diff empty); LsmKvStateMachine mirrors mem exactly.
+# see docs/m6-design.md 10.14 for ownership + full classification.

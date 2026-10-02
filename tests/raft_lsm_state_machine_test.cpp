@@ -58,8 +58,8 @@ TEST_F(LsmContract, BasicOps) { Contract_BasicOps<LsmKvStateMachine>(Lsm()); }
 TEST_F(LsmContract, IdempotentSameIndex) {
   Contract_IdempotentSameIndex<LsmKvStateMachine>(Lsm());
 }
-TEST_F(LsmContract, IdempotentHigherIndexAdvancesApplied) {
-  Contract_IdempotentHigherIndexAdvancesApplied<LsmKvStateMachine>(Lsm());
+TEST_F(LsmContract, IdempotentHigherIndexKeepsData) {
+  Contract_IdempotentHigherIndexKeepsData<LsmKvStateMachine>(Lsm());
 }
 TEST_F(LsmContract, MarkersAdvanceApplied) {
   Contract_MarkersAdvanceApplied<LsmKvStateMachine>(Lsm());

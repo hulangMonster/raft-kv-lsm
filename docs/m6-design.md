@@ -1258,7 +1258,7 @@ cd ~/raft-kv-lsm && grep -n 'FileLogStore\|FileSnapshotStore\|KvStateMachine\|--
 **目标**
 1. 新增 `LsmKvStateMachine`，让状态机的 `数据 / 去重表 / lastApplied` 由 lsm 引擎持久承载。
 2. `apply` 对同一 `(clientId, requestId)` 幂等；三者**同一原子批**落盘（M6-I10）。
-3. 快照边界不变：`snapshotView()` 仍是锁内纯内存拷贝，`restore()` 仍是整体替换；`restore` 后 `lastApplied` 不低于快照边界。
+3. 快照边界不变：`snapshotView()` 仍是锁内纯内存拷贝，`restore()` 仍是整体替换；`restore` 后**权威** `lastApplied`（`RaftNode::lastApplied_`）不低于快照边界（归属见 §10.14）。
 4. 开关切换；默认 mem 路径**零行为变更**；两条路径都可跑通 M6 门禁。
 5. 编解码安全（M6-I11）：畸形/越界载荷不得越界读、不得 panic。
 
@@ -1293,14 +1293,14 @@ cd ~/raft-kv-lsm && grep -n 'FileLogStore\|FileSnapshotStore\|KvStateMachine\|--
 | 方法 | `KvStateMachine`（mem） | `LsmKvStateMachine`（lsm） | 等价性 |
 |---|---|---|---|
 | `apply(kPut/kDel)` | 改 `data_`；更新 `lastRequest_`；`lastApplied_=index` | 同一 `WriteBatch`：数据 Put/Delete + 去重 Put + applied Put；**写成功后再改 mirror** | 数据/去重语义等价；多一条 WAL 写（代价见 §10.12） |
-| `apply(重复 (cid,rid))` | 丢弃数据改动 | 只写 applied 的批（数据/去重不变） | **两者都推进 `lastApplied_`**（C13） |
+| `apply(重复 (cid,rid))` | 丢弃（直接 return） | 丢弃（不写批、不推进） | 两者都**不推进** `lastApplied_`（见 §10.14） |
 | `apply(kGet/kConfig)` | no-op，仅推进 `lastApplied_` | 只写 applied 的批 | 等价 |
 | `get(k)` | `data_.find` | `data_.find`（mirror） | 等价 |
 | `lastApplied()` | mirror 值 | mirror 值 | 等价 |
 | `snapshotView()` | 拷贝 `data_/lastRequest_/lastApplied_` | 同上（从 mirror 拷贝） | 载荷逐字节相同（测试钉住） |
 | `restore(payload)` | 解析并整体替换三张表 | 解析 → 与 mirror 求差 → **一个 WriteBatch** → 替换 mirror | 载荷格式相同；lsm 版多一次原子批写 |
 
-注：C13 是本里程碑对既有 `KvStateMachine` 的**唯一**行为改动 —— 重复条目也要推进 `lastApplied_`。这不是语义放宽而是 M6-I10 要求的补强：client 重试会以同一 `(clientId, requestId)`、**更高 index** 重新入日志（见 `main_raft_client.cpp` 的 redirect 重试），若不推进，SM 的 `lastApplied` 会落后于 Raft 快照边界 `snapIndex`，快照载荷里的 applied 水位就小于边界。既有断言 `KvIdempotent.ApplyIsIdempotentOnRetry`（同 index 重放，断言 `lastApplied()==1`）逐字不变、仍通过。
+注（已按 §10.14 修订）：重复条目按 m2-design §6.5 是「直接丢弃」，**不改数据也不推进 applied 水位**。既有 `KvStateMachine` 保持原样（基线不动），LSM 后端逐字镜像它。
 
 ### 10.5 原子落盘与 durable 落点表
 
@@ -1310,7 +1310,8 @@ cd ~/raft-kv-lsm && grep -n 'FileLogStore\|FileSnapshotStore\|KvStateMachine\|--
 |---|---|---|---|---|
 | `apply(kPut)` | 持 `mu_`（`advanceCommitAndApply`） | 数据 Put + 去重 Put + applied Put（1 条 record） | **无**（`WriteOptions.sync=false`，只写 WAL/memtable，等同 `LogStore::appendNoSync`） | 不依赖；ack 依赖 `log_.sync()` |
 | `apply(kDel)` | 同上 | 数据 Delete + 去重 Put + applied Put | 无 | 同上 |
-| `apply(重复 / no-op)` | 同上 | applied Put | 无 | 同上 |
+| `apply(kGet/kConfig)`（no-op 标记） | 同上 | applied Put | 无 | 同上 |
+| `apply(重复 (cid,rid))` | 同上 | **不写**（直接丢弃） | 无 | 同上 |
 | `restore(payload)` | 持 `mu_`（构造期不持；`onInstallSnapshot` 持） | Put/Delete 差量 + applied Put（1 条 record） | 无 | 同上 |
 | 优雅关闭 | 无 | — | 显式 `LsmKvStateMachine::sync()`（`main` 在 `_Exit` 前调用） | — |
 | `sync()`（测试/诊断缝） | **不得持 `mu_`** | — | `DB::Sync()` | — |
@@ -1356,7 +1357,7 @@ RaftNode::mu_  ->  LsmKvStateMachine（无自有锁，全部调用由 mu_ 串行
 
 | 层 | 载体 | 断言要点 |
 |---|---|---|
-| 契约单测（mem + lsm 同一组断言） | `tests/sm_contract_body.h`（模板体）+ `tests/raft_sm_contract_test.cpp`（KvStateMachine）+ `tests/raft_lsm_state_machine_test.cpp`（LsmKvStateMachine） | 幂等重放（同 cid/rid 不同 index：数据不变、applied 前进）；`kGet/kConfig` 推进 applied；快照载荷**逐字节相同**（serialize 与流式拼接）；restore 往返 / 交叉 restore；畸形载荷拒绝；空状态 |
+| 契约单测（mem + lsm 同一组断言） | `tests/sm_contract_body.h`（模板体）+ `tests/raft_sm_contract_test.cpp`（KvStateMachine）+ `tests/raft_lsm_state_machine_test.cpp`（LsmKvStateMachine） | 幂等重放（同 cid/rid 不同 index：数据不变、applied 不前进 —— m2-design §6.5 直接丢弃）；`kGet/kConfig` 推进 applied；快照载荷**逐字节相同**（serialize 与流式拼接）；restore 往返 / 交叉 restore；畸形载荷拒绝；空状态 |
 | LSM 专属：崩溃一致性 | `tests/raft_lsm_state_machine_test.cpp` | 写 N 条 → 不析构直接重开（等价 kill -9）→ 三者一致；重放同批 → 幂等；WAL 尾部注入垃圾 → 恢复出**一致前缀**、不 panic |
 | LSM 专属：restore 原子性 | 同上 | `restore` 后重开，数据/去重/applied 三者都到位 |
 | 端到端门禁 | `scripts/raft_e2e.sh` / `raft_fault.sh` / `raft_snapshot_fault.sh` / `raft_membership_fault.sh` 各加 `--state-engine` | `--state-engine=lsm` 至少 10 轮 PASS；`kill -9` 后 `verify missing 0` |
@@ -1385,7 +1386,7 @@ RaftNode::mu_  ->  LsmKvStateMachine（无自有锁，全部调用由 mu_ 串行
 | C10 | 新增 `src/kv/lsm_kv_state_machine.{h,cpp}` | 新文件 | M6.9 的核心逻辑 |
 | C11 | `CMakeLists.txt`：`lsm_kv_state_machine.cpp` 进 `raftkv_raft`；新测试文件进 `raftkv_raft_tests` | L55-70 / L110+ | 构建接线 |
 | C12 | `src/main_raft_node.cpp`：`--state-engine=mem|lsm` + `RAFTKV_STATE_ENGINE`（默认 mem）；`_Exit` 前显式 `sync()` | 仿 `--log-engine` | 开关 + 优雅落盘点 |
-| C13 | `src/kv/kv_state_machine.cpp` **一行**：重复条目也推进 `lastApplied_` | `apply` 的重复分支 | M6-I10：restore 后 applied ≥ 快照边界；不删 / 不弱化任何断言 |
+| C13（已按 §10.14 撤销） | **不修改** `src/kv/kv_state_machine.cpp`（基线） | — | m2-design §6.5：「直接丢弃」；LSM 适配层逐字镜像 mem |
 | C14 | `scripts/raft_{e2e,fault,snapshot_fault,membership_fault}.sh` 透传 `--state-engine` | 各参数解析 + `start_node()` | 用同一套门禁驱动两条路径 |
 | C15 | `docs/m6-evidence.md` / `README.md` / `docs/roadmap.md` 追加 | 文档 | M6.9.4 收口 |
 
@@ -1408,3 +1409,28 @@ C10–C15 之外的一切改动都需要父代理裁决。
 3. 未降低状态机内存占用（N-D）。
 4. 未改 `~/lsm-kv`；若实现中发现 lsm 侧限制（例如 `DB::Write` 的批上限、`Iterator` 语义）会在此登记并停下报告。
 
+### 10.14 M6.9.2 实现期修订：`lastApplied` 归属与 mem 基线不动
+
+**触发**：M6.9.1 的 RED 里，`Contract_IdempotentHigherIndexAdvancesApplied` 在既有 mem 实现上失败（原始输出 `docs/raw/m6.9.1-red-mem-contract.log`）。我最初据此判定 mem 有缺陷；经父代理裁决并回查权威契约后**推翻该判定**：
+
+- **契约原文**：`docs/m2-design.md` §6.5 —— 「`apply()` 规则：`requestId <= lastRequestId` -> **直接丢弃**（重复请求），否则应用并更新」；`src/raft/state_machine.h` 只要求 「`apply()` MUST be idempotent per (clientId, requestId)」。**没有任何契约行**要求「被丢弃的重复条目必须推进 `lastApplied`」。
+- **判定**：`IdempotentHigherIndexAdvancesApplied` 是**测试侧过度断言**（发明了契约），不是 mem 基线违约。按「找不到原文引用 -> 改测试」处理：重命名为 `IdempotentHigherIndexKeepsData`，断言「数据不变 + `lastApplied` 不前进（仍为 1）」，mem/lsm 两条腿都跑。
+- **mem 基线不动**：`src/kv/kv_state_machine.cpp` 保持 HEAD 原样（`git diff` 为空）；M6.9 的全部新逻辑只在新增适配层。
+- **LSM 后端逐字镜像 mem**：重复分支直接 `return`（不写 WriteBatch、不推进水位）；`kGet/kConfig` no-op 分支推进并落一条 applied 批。
+
+**`lastApplied` 的归属（谁拥有 / 谁持久化 / ack 前需到哪一步）**：
+
+| 角色 | 归属 | 持久化 | ack 前需到哪一步 |
+|---|---|---|---|
+| 权威 applied 边界 | `RaftNode::lastApplied_`（`mu_` 保护） | 不单独持久化；由 durable 日志重放 + 快照边界重建 | ack 只要求日志 durable（`log_.sync()`）；applied 由 `advanceCommitAndApply` 推进后唤醒等待者 |
+| 快照边界 | `RaftNode::lastIncluded_` / `SnapshotData::lastIncludedIndex` | `FileSnapshotStore`（快照文件） | 快照 <= `RaftNode::lastApplied_` 由 `maybeSnapshot()` 保证（`snapIndex = lastApplied_`） |
+| SM 内部 applied 水位 | `KvStateMachine::lastApplied_` / `LsmKvStateMachine::lastApplied_`（派生镜像） | mem：无（由重放重建）；lsm：与数据同 `WriteBatch` 落 applied key | **不在 ack 关键路径**；它是「该 SM 处理到哪条」的派生水位，允许在「被直接丢弃的重复条目」上不前进 |
+
+因此 M6-I10 的「restore 后 `lastApplied` 不低于快照边界」在本设计里按**权威 applied 边界**（`RaftNode::lastApplied_`，restore / InstallSnapshot 时被显式置为快照边界）判定并成立；SM 的派生水位不承担该不变量。**本节是对 §10.2 目标 3 / §10.4 / §10.5 / §10.9 / §10.11 (C13) 的修订，以本节为准。**
+
+**RED 逐条分类（对应父代理规则 2）**：
+
+| RED | 类别 | 处置 |
+|---|---|---|
+| `fatal error: kv/lsm_kv_state_machine.h: No such file`（`docs/raw/m6.9.1-red-compile.log`） | (a) LSM 版缺失 | 正常，M6.9.2 实现后消失 |
+| `KvStateMachineContract.IdempotentHigherIndexAdvancesApplied`（`docs/raw/m6.9.1-red-mem-contract.log`） | (b) 实为测试侧过度断言 | 按 m2-design §6.5 改测试（见上），mem 基线不动 |

@@ -136,18 +136,21 @@ void Contract_IdempotentSameIndex(const Factory<SM>& make) {
   EXPECT_EQ(sm->lastApplied(), static_cast<Index>(1));
 }
 
-// M6-I10: a retried request is re-appended at a HIGHER index. Data must not
-// change, but lastApplied MUST advance so the state machine never lags the raft
-// snapshot boundary embedded in the payload.
+// A retried request is re-appended at a HIGHER index. m2-design 6.5 defines the
+// duplicate rule as "requestId <= lastRequestId -> directly discard": the data
+// must not change and the entry is not applied, so the applied watermark does
+// not move either. The mem baseline (src/kv/kv_state_machine.cpp) is the
+// reference and is deliberately NOT modified for M6.9; the LSM backend mirrors
+// it exactly (see docs/m6-design.md 10.14).
 template <typename SM>
-void Contract_IdempotentHigherIndexAdvancesApplied(const Factory<SM>& make) {
+void Contract_IdempotentHigherIndexKeepsData(const Factory<SM>& make) {
   auto sm = make();
   sm->apply(put(1, "k", "v", 7, 42));
   sm->apply(put(2, "k", "MUST-NOT-APPLY", 7, 42));
   std::string out;
   ASSERT_TRUE(sm->get("k", out));
   EXPECT_EQ(out, "v");
-  EXPECT_EQ(sm->lastApplied(), static_cast<Index>(2));
+  EXPECT_EQ(sm->lastApplied(), static_cast<Index>(1));  // discarded, not applied
 }
 
 template <typename SM>

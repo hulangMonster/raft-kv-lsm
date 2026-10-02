@@ -66,6 +66,7 @@ add_library(raftkv_raft STATIC
   src/raft/memory_snapshot_store.cpp
   src/raft/file_snapshot_store.cpp
   src/kv/kv_state_machine.cpp
+  src/kv/lsm_kv_state_machine.cpp
 )
 target_include_directories(raftkv_raft PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(raftkv_raft PUBLIC Threads::Threads)

@@ -20,8 +20,8 @@ TEST(KvStateMachineContract, BasicOps) { Contract_BasicOps<KvStateMachine>(Mem()
 TEST(KvStateMachineContract, IdempotentSameIndex) {
   Contract_IdempotentSameIndex<KvStateMachine>(Mem());
 }
-TEST(KvStateMachineContract, IdempotentHigherIndexAdvancesApplied) {
-  Contract_IdempotentHigherIndexAdvancesApplied<KvStateMachine>(Mem());
+TEST(KvStateMachineContract, IdempotentHigherIndexKeepsData) {
+  Contract_IdempotentHigherIndexKeepsData<KvStateMachine>(Mem());
 }
 TEST(KvStateMachineContract, MarkersAdvanceApplied) {
   Contract_MarkersAdvanceApplied<KvStateMachine>(Mem());

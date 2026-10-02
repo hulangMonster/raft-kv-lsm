@@ -1,0 +1,608 @@
+# M6.9.2 GREEN - new contract/crash tests x200 (stability count line)
+# command: ./bin/raftkv_raft_tests --gtest_filter='KvStateMachineContract.*:LsmContract.*:LsmCrash.*' --gtest_repeat=200 --gtest_break_on_failure
+# result: EXIT=0 ; OK lines=5400 (= 200 x 27) ; 0 failures
+# --- original summary tail (full log kept out of git: it is 5400 OK lines / generated) ---
+
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (121 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (170 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (156 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (151 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (163 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (176 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (138 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (153 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (160 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (175 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (182 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (152 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (170 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (170 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (151 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (158 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (171 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (164 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (197 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (170 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (171 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (178 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (180 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (146 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (170 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (107 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (109 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (172 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (165 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (137 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (170 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (147 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (168 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (163 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (160 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (182 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (174 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (172 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (150 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (169 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (176 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (189 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (166 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (148 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (151 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (167 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (145 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (190 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (156 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (154 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (165 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (141 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (156 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (133 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (108 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (157 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (147 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (78 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (101 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (128 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (111 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (108 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (123 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (109 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (142 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (128 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (148 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (165 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (124 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (149 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (137 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (110 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (114 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (131 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (99 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (130 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (131 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (142 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (146 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (147 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (128 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (123 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (121 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (125 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (135 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (125 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (139 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (142 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (140 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (141 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (152 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (153 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (151 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (154 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (155 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (67 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (103 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (134 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (154 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (153 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (134 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (139 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (162 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (145 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (145 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (155 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (152 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (157 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (160 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (154 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (164 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (163 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (167 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (157 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (159 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (168 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (160 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (145 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (161 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (154 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (131 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (122 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (153 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (146 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (108 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (99 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (88 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (133 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (105 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (98 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (90 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (74 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (89 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (96 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (106 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (119 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (100 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (112 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (103 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (126 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (143 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (99 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (89 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (84 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (78 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (70 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (77 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (97 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (90 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (85 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (86 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (96 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (62 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (63 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (63 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (74 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (63 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (63 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (65 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (81 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (85 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (83 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (60 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (66 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (67 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (70 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (66 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (73 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (78 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (85 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (84 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (84 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (80 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (90 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (95 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (93 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (97 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (127 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (111 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (117 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (115 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (115 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (132 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (157 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (157 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (86 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (100 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (124 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (141 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (146 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (141 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (157 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (127 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (136 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (124 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (108 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (99 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (140 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (145 ms total)
+[  PASSED  ] 27 tests.
+[==========] Running 27 tests from 3 test suites.
+[==========] 27 tests from 3 test suites ran. (154 ms total)
+[  PASSED  ] 27 tests.
+
+# ok_count=5400
+# done_marker=EXIT=0
