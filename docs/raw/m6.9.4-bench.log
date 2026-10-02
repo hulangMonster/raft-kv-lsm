@@ -1,0 +1,11 @@
+# M6.9.4 state-machine A/B cost (3 nodes, N=20000, pipeline=64, 2 runs each; all verify=[missing 0])
+# config: log engine / state engine
+BENCH tag=file-mem-r1 log=file state=mem N=20000 rc=0 elapsed_s=8.469 qps=2362 verify=[missing 0]
+BENCH tag=lsm-mem-r1 log=lsm state=mem N=20000 rc=0 elapsed_s=8.862 qps=2257 verify=[missing 0]
+BENCH tag=lsm-lsm-r1 log=lsm state=lsm N=20000 rc=0 elapsed_s=10.175 qps=1966 verify=[missing 0]
+BENCH tag=file-mem-r2 log=file state=mem N=20000 rc=0 elapsed_s=8.971 qps=2229 verify=[missing 0]
+BENCH tag=lsm-mem-r2 log=lsm state=mem N=20000 rc=0 elapsed_s=9.460 qps=2114 verify=[missing 0]
+BENCH tag=lsm-lsm-r2 log=lsm state=lsm N=20000 rc=0 elapsed_s=10.577 qps=1891 verify=[missing 0]
+BENCH_DONE
+
+# raw log includes shell job-control 'Killed' noise from kill -9 cleanup; harmless.

@@ -128,6 +128,16 @@
   （`GetLevelStats`/`GetAmplificationStats`/`GetFlushStats`）、ASan/TSan 在本轮的收口、
   `raft_snapshot_fault.sh --log-engine lsm --repeat 50` 全量轮
 
+## M6.9 状态机数据落到 LSM（**已交付**）
+
+- ✅ `LsmKvStateMachine` + 共享载荷编解码 `src/kv/kv_snapshot_view.h`；与 `KvStateMachine` 逐方法等价（27 个新用例，mem/lsm 同组断言）
+- ✅ `--state-engine=mem|lsm`（默认 mem）；4 个门禁脚本透传 `--state-engine`
+- ✅ 原子性：一次 `apply` 的 数据+去重表+`lastApplied` = 一个 lsm `WriteBatch`；崩溃/重开一致；`restore` 原子
+- ✅ 门禁 `--log-engine lsm --state-engine lsm`：fault/snapshot/membership 各 10 轮 PASS；e2e 9/10（1 次**既有 harness flake**）+ mem 链路全 PASS；kill -9 -> `verify missing 0`
+- ✅ ASan 149/149 全绿 0 报告；TSan canonical 0 报告 / 无抑制 16 条（0 data race，与基线一致）；Release 干净重建 0 warning + 149/149 + M1 13/13
+- ⬜ 未做：G6 掉电语义、G13 关闭期 leak/race（仅 ASan 生命周期）、RSS 未降（N-D）、SM fsync 未合并进 group commit、`raft_e2e.sh` 既有 flake 未修
+- 证据：`docs/m6-evidence.md` §M6.9；设计：`docs/m6-design.md` §10/§10.14；原始输出：`docs/raw/m6.9.*`
+
 ## 贯穿性工程要求
 
 - 每个阶段先写"怎么验证"，再写实现

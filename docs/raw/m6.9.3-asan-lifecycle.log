@@ -1,0 +1,8 @@
+# M6.9.3 ASan process lifecycle (G13 partial): 3 nodes log=lsm state=lsm; elect -> put/get -> SIGTERM
+# command: build-asan/bin/raftkv_raft_node ... (ASAN_OPTIONS=detect_leaks=1), then SIGTERM
+# note: the node exits via _Exit(0), so LSan does not run at exit; ASan runtime errors would still be reported.
+leader=3
+put OK
+get=[asan_v]
+asan_node_error_lines=0
+LIFECYCLE_DONE

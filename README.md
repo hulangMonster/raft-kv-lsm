@@ -295,6 +295,16 @@ reactor 稳定。默认仍是 `sync`（3 节点下高并发更省 CPU），**计
     vs `raft.log` 49 770 B（**≈50×**），且 `compact()` 只写 tombstone、物理回收要等后台 compaction；
   * 未采集：P99/max 延迟（node 侧直方图未实现）、fsync 次数（`strace` 通道实测无效）。
 - 证据与偏差裁决：**[docs/m6-evidence.md](docs/m6-evidence.md)**；A/B 数字：**[docs/m6-bench.md](docs/m6-bench.md)**；
+
+#### M6.9：状态机数据落到 LSM（`--state-engine=mem|lsm`）
+
+- **`LsmKvStateMachine`**（`src/kv/lsm_kv_state_machine.{h,cpp}`）：与 `KvStateMachine` **同一 `StateMachine` 接口与逐方法语义**，但把状态机的 `数据 + (clientId, requestId) 去重表 + lastApplied` 落到 `<data-dir>/kv-lsm`；共享载荷编解码在 `src/kv/kv_snapshot_view.h`。
+- **原子性**：一次 `apply` 的 数据 + 去重表 + `lastApplied` 落在**同一个 `WriteBatch`**（一条 lsm WAL record）=> 崩溃重开后三者要么全在、要么全不在；重复 `(clientId, requestId)` 直接丢弃。
+- **开关**：`--state-engine=mem|lsm` / `RAFTKV_STATE_ENGINE`，**默认 `mem`**（零行为变更 + 一键回退）；未知值 `exit 2`，绝不静默降级。
+- **不改 Raft 算法 / 不改快照文件格式**：沿用既有 `FileSnapshotStore` 与 `SnapshotView/SnapshotStream/restore` 契约（载荷与 mem 臂逐字节相同，测试钉住）；`snapshotView()` 仍是锁内纯内存拷贝（故保留 read-side mirror）。
+- **代价（负结果）**：状态机落到 lsm 约 **-12% 吞吐**（3 节点 `fill 20000 --pipeline 64`：`lsm/mem` ~2186 qps vs `lsm/lsm` ~1929 qps）；RSS 未降；`apply` 的 fsync **不在 ack 路径**（ack 由 raft 日志 fsync 保证，SM 可由日志重放重建）。
+- 证据：**[docs/m6-evidence.md](docs/m6-evidence.md)** §M6.9；设计：**[docs/m6-design.md](docs/m6-design.md)** §10 / §10.14；原始输出：`docs/raw/m6.9.*`。
+
   设计：**[docs/m6-design.md](docs/m6-design.md)**。
 
 
