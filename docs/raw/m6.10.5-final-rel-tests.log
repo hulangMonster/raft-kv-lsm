@@ -20,7 +20,7 @@
 [       OK ] RaftLog.ConflictingSuffixTruncatedOnLeaderChange (0 ms)
 [ RUN      ] RaftLog.LaggingFollowerCatchesUp
 [       OK ] RaftLog.LaggingFollowerCatchesUp (0 ms)
-[----------] 3 tests from RaftLog (2 ms total)
+[----------] 3 tests from RaftLog (0 ms total)
 
 [----------] 2 tests from RaftCommit
 [ RUN      ] RaftCommit.CommitRequiresMajority
@@ -66,76 +66,76 @@
 [ RUN      ] LsmContract.Empty
 [       OK ] LsmContract.Empty (5 ms)
 [ RUN      ] LsmContract.BasicOps
-[       OK ] LsmContract.BasicOps (4 ms)
+[       OK ] LsmContract.BasicOps (7 ms)
 [ RUN      ] LsmContract.IdempotentSameIndex
-[       OK ] LsmContract.IdempotentSameIndex (9 ms)
+[       OK ] LsmContract.IdempotentSameIndex (6 ms)
 [ RUN      ] LsmContract.IdempotentHigherIndexKeepsData
-[       OK ] LsmContract.IdempotentHigherIndexKeepsData (9 ms)
+[       OK ] LsmContract.IdempotentHigherIndexKeepsData (7 ms)
 [ RUN      ] LsmContract.MarkersAdvanceApplied
-[       OK ] LsmContract.MarkersAdvanceApplied (8 ms)
+[       OK ] LsmContract.MarkersAdvanceApplied (6 ms)
 [ RUN      ] LsmContract.CanonicalState
-[       OK ] LsmContract.CanonicalState (7 ms)
+[       OK ] LsmContract.CanonicalState (4 ms)
 [ RUN      ] LsmContract.SnapshotDeterministic
-[       OK ] LsmContract.SnapshotDeterministic (5 ms)
+[       OK ] LsmContract.SnapshotDeterministic (3 ms)
 [ RUN      ] LsmContract.StreamMatchesSerialize
-[       OK ] LsmContract.StreamMatchesSerialize (6 ms)
+[       OK ] LsmContract.StreamMatchesSerialize (7 ms)
 [ RUN      ] LsmContract.SnapshotRoundTrip
-[       OK ] LsmContract.SnapshotRoundTrip (15 ms)
+[       OK ] LsmContract.SnapshotRoundTrip (9 ms)
 [ RUN      ] LsmContract.RestoreRejectsMalformed
 [       OK ] LsmContract.RestoreRejectsMalformed (8 ms)
 [ RUN      ] LsmContract.CrossRestoreMemToLsm
-[       OK ] LsmContract.CrossRestoreMemToLsm (6 ms)
+[       OK ] LsmContract.CrossRestoreMemToLsm (5 ms)
 [ RUN      ] LsmContract.CrossRestoreLsmToMem
-[       OK ] LsmContract.CrossRestoreLsmToMem (7 ms)
+[       OK ] LsmContract.CrossRestoreLsmToMem (5 ms)
 [ RUN      ] LsmContract.SnapshotBytesIdenticalToMem
-[       OK ] LsmContract.SnapshotBytesIdenticalToMem (6 ms)
-[----------] 13 tests from LsmContract (102 ms total)
+[       OK ] LsmContract.SnapshotBytesIdenticalToMem (5 ms)
+[----------] 13 tests from LsmContract (85 ms total)
 
 [----------] 4 tests from LsmCrash
 [ RUN      ] LsmCrash.UncleanExitKeepsConsistentPrefix
-[       OK ] LsmCrash.UncleanExitKeepsConsistentPrefix (18 ms)
+[       OK ] LsmCrash.UncleanExitKeepsConsistentPrefix (15 ms)
 [ RUN      ] LsmCrash.SyncBeforeExitKeepsAllDurable
-[       OK ] LsmCrash.SyncBeforeExitKeepsAllDurable (13 ms)
+[       OK ] LsmCrash.SyncBeforeExitKeepsAllDurable (18 ms)
 [ RUN      ] LsmCrash.TornWalTailRecoversConsistentPrefix
-[       OK ] LsmCrash.TornWalTailRecoversConsistentPrefix (13 ms)
+[       OK ] LsmCrash.TornWalTailRecoversConsistentPrefix (9 ms)
 [ RUN      ] LsmCrash.RestoreAtomicSurvivesReopen
-[       OK ] LsmCrash.RestoreAtomicSurvivesReopen (18 ms)
-[----------] 4 tests from LsmCrash (63 ms total)
+[       OK ] LsmCrash.RestoreAtomicSurvivesReopen (5 ms)
+[----------] 4 tests from LsmCrash (48 ms total)
 
 [----------] 9 tests from LsmRestore
 [ RUN      ] LsmRestore.MultiEntryPayloadOver64MiBRestoresInManyBatches
-[       OK ] LsmRestore.MultiEntryPayloadOver64MiBRestoresInManyBatches (5541 ms)
+[       OK ] LsmRestore.MultiEntryPayloadOver64MiBRestoresInManyBatches (5804 ms)
 [ RUN      ] LsmRestore.SingleHugeValueRestoresAcrossChunks
-[       OK ] LsmRestore.SingleHugeValueRestoresAcrossChunks (5678 ms)
+[       OK ] LsmRestore.SingleHugeValueRestoresAcrossChunks (2353 ms)
 [ RUN      ] LsmRestore.Exactly64MiBPayloadRestores
-[       OK ] LsmRestore.Exactly64MiBPayloadRestores (2972 ms)
+[       OK ] LsmRestore.Exactly64MiBPayloadRestores (811 ms)
 [ RUN      ] LsmRestore.OverOneChunkBelow64MiBRestores
-[       OK ] LsmRestore.OverOneChunkBelow64MiBRestores (313 ms)
+[       OK ] LsmRestore.OverOneChunkBelow64MiBRestores (78 ms)
 [ RUN      ] LsmRestore.RepeatedRestoreIsIdempotent
-[       OK ] LsmRestore.RepeatedRestoreIsIdempotent (909 ms)
+[       OK ] LsmRestore.RepeatedRestoreIsIdempotent (241 ms)
 [ RUN      ] LsmRestore.ApplyLargeValueChunksInProcess
-[       OK ] LsmRestore.ApplyLargeValueChunksInProcess (187 ms)
+[       OK ] LsmRestore.ApplyLargeValueChunksInProcess (165 ms)
 [ RUN      ] LsmRestore.ThrowingRestoreHookKeepsOldState
-[       OK ] LsmRestore.ThrowingRestoreHookKeepsOldState (218 ms)
+[       OK ] LsmRestore.ThrowingRestoreHookKeepsOldState (156 ms)
 [ RUN      ] LsmRestore.KillBetweenStagedBatchesKeepsOldStateAndConverges
-[       OK ] LsmRestore.KillBetweenStagedBatchesKeepsOldStateAndConverges (3290 ms)
+[       OK ] LsmRestore.KillBetweenStagedBatchesKeepsOldStateAndConverges (2282 ms)
 [ RUN      ] LsmRestore.RestoredDedupTableStaysConsistentWithData
-[       OK ] LsmRestore.RestoredDedupTableStaysConsistentWithData (1798 ms)
-[----------] 9 tests from LsmRestore (20912 ms total)
+[       OK ] LsmRestore.RestoredDedupTableStaysConsistentWithData (1136 ms)
+[----------] 9 tests from LsmRestore (13031 ms total)
 
 [----------] 2 tests from LsmApplyReopen
 [ RUN      ] LsmApplyReopen.LargeApplySurvivesReopen
-[       OK ] LsmApplyReopen.LargeApplySurvivesReopen (427 ms)
+[       OK ] LsmApplyReopen.LargeApplySurvivesReopen (321 ms)
 [ RUN      ] LsmApplyReopen.LargeApplySurvivesKill9
-[       OK ] LsmApplyReopen.LargeApplySurvivesKill9 (365 ms)
-[----------] 2 tests from LsmApplyReopen (793 ms total)
+[       OK ] LsmApplyReopen.LargeApplySurvivesKill9 (391 ms)
+[----------] 2 tests from LsmApplyReopen (712 ms total)
 
 [----------] 2 tests from FileLogStore
 [ RUN      ] FileLogStore.RestartRestoresMetaAndLog
-[       OK ] FileLogStore.RestartRestoresMetaAndLog (7 ms)
+[       OK ] FileLogStore.RestartRestoresMetaAndLog (8 ms)
 [ RUN      ] FileLogStore.TruncatesTornTail
-[       OK ] FileLogStore.TruncatesTornTail (3 ms)
-[----------] 2 tests from FileLogStore (10 ms total)
+[       OK ] FileLogStore.TruncatesTornTail (2 ms)
+[----------] 2 tests from FileLogStore (11 ms total)
 
 [----------] 21 tests from LsmLogStore
 [ RUN      ] LsmLogStore.KeyEncodingIsBytewiseIndexOrdered
@@ -143,44 +143,44 @@
 [ RUN      ] LsmLogStore.MetaKeyIsOutsideLogRange
 [       OK ] LsmLogStore.MetaKeyIsOutsideLogRange (0 ms)
 [ RUN      ] LsmLogStore.AppendIsDurableAndVisible
-[       OK ] LsmLogStore.AppendIsDurableAndVisible (5 ms)
+[       OK ] LsmLogStore.AppendIsDurableAndVisible (10 ms)
 [ RUN      ] LsmLogStore.AppendNoSyncIsVisibleButSurvivesSync
-[       OK ] LsmLogStore.AppendNoSyncIsVisibleButSurvivesSync (8 ms)
+[       OK ] LsmLogStore.AppendNoSyncIsVisibleButSurvivesSync (7 ms)
 [ RUN      ] LsmLogStore.IdempotentAppendSameIndexSameTerm
-[       OK ] LsmLogStore.IdempotentAppendSameIndexSameTerm (9 ms)
+[       OK ] LsmLogStore.IdempotentAppendSameIndexSameTerm (7 ms)
 [ RUN      ] LsmLogStore.ConflictTruncateThenAppend
-[       OK ] LsmLogStore.ConflictTruncateThenAppend (13 ms)
+[       OK ] LsmLogStore.ConflictTruncateThenAppend (10 ms)
 [ RUN      ] LsmLogStore.TruncateSuffixBoundaries
-[       OK ] LsmLogStore.TruncateSuffixBoundaries (14 ms)
+[       OK ] LsmLogStore.TruncateSuffixBoundaries (9 ms)
 [ RUN      ] LsmLogStore.TruncateNoSyncThenSyncIsDurable
-[       OK ] LsmLogStore.TruncateNoSyncThenSyncIsDurable (12 ms)
+[       OK ] LsmLogStore.TruncateNoSyncThenSyncIsDurable (10 ms)
 [ RUN      ] LsmLogStore.TruncateNoSyncIntoKillDashNineKeepsDeletionInPageCache
-[       OK ] LsmLogStore.TruncateNoSyncIntoKillDashNineKeepsDeletionInPageCache (32 ms)
+[       OK ] LsmLogStore.TruncateNoSyncIntoKillDashNineKeepsDeletionInPageCache (30 ms)
 [ RUN      ] LsmLogStore.SliceClampsAndHonoursLimits
-[       OK ] LsmLogStore.SliceClampsAndHonoursLimits (11 ms)
+[       OK ] LsmLogStore.SliceClampsAndHonoursLimits (13 ms)
 [ RUN      ] LsmLogStore.CompactDropsPrefixAndSurvivesRestart
-[       OK ] LsmLogStore.CompactDropsPrefixAndSurvivesRestart (11 ms)
+[       OK ] LsmLogStore.CompactDropsPrefixAndSurvivesRestart (9 ms)
 [ RUN      ] LsmLogStore.PrefixGoneWithoutSnapshotRefusesLoad
-[       OK ] LsmLogStore.PrefixGoneWithoutSnapshotRefusesLoad (12 ms)
+[       OK ] LsmLogStore.PrefixGoneWithoutSnapshotRefusesLoad (8 ms)
 [ RUN      ] LsmLogStore.LoadSkipsEntriesBelowBoundary
-[       OK ] LsmLogStore.LoadSkipsEntriesBelowBoundary (7 ms)
+[       OK ] LsmLogStore.LoadSkipsEntriesBelowBoundary (6 ms)
 [ RUN      ] LsmLogStore.EmptyLogWithBoundary
-[       OK ] LsmLogStore.EmptyLogWithBoundary (2 ms)
+[       OK ] LsmLogStore.EmptyLogWithBoundary (7 ms)
 [ RUN      ] LsmLogStore.MetaPersistIsAtomicAndDurable
-[       OK ] LsmLogStore.MetaPersistIsAtomicAndDurable (9 ms)
+[       OK ] LsmLogStore.MetaPersistIsAtomicAndDurable (10 ms)
 [ RUN      ] LsmLogStore.SecondProcessOnSameDirIsRejectedByLock
-[       OK ] LsmLogStore.SecondProcessOnSameDirIsRejectedByLock (13 ms)
+[       OK ] LsmLogStore.SecondProcessOnSameDirIsRejectedByLock (16 ms)
 [ RUN      ] LsmLogStore.LoadRefusesGapInTheMiddle
-[       OK ] LsmLogStore.LoadRefusesGapInTheMiddle (12 ms)
+[       OK ] LsmLogStore.LoadRefusesGapInTheMiddle (16 ms)
 [ RUN      ] LsmLogStore.ValueBytesMatchFileLogStoreOnDisk
-[       OK ] LsmLogStore.ValueBytesMatchFileLogStoreOnDisk (14 ms)
+[       OK ] LsmLogStore.ValueBytesMatchFileLogStoreOnDisk (11 ms)
 [ RUN      ] LsmLogStore.ConcurrentAppendSyncAndReadersStayConsistent
-[       OK ] LsmLogStore.ConcurrentAppendSyncAndReadersStayConsistent (340 ms)
+[       OK ] LsmLogStore.ConcurrentAppendSyncAndReadersStayConsistent (222 ms)
 [ RUN      ] LsmLogStore.RestartRestoresMetaAndLog
-[       OK ] LsmLogStore.RestartRestoresMetaAndLog (11 ms)
+[       OK ] LsmLogStore.RestartRestoresMetaAndLog (6 ms)
 [ RUN      ] LsmLogStore.TruncatesTornTail
-[       OK ] LsmLogStore.TruncatesTornTail (10 ms)
-[----------] 21 tests from LsmLogStore (558 ms total)
+[       OK ] LsmLogStore.TruncatesTornTail (6 ms)
+[----------] 21 tests from LsmLogStore (425 ms total)
 
 [----------] 13 tests from RaftSnapshot
 [ RUN      ] RaftSnapshot.SnapshotCreatedAtThreshold
@@ -209,47 +209,47 @@
 [       OK ] RaftSnapshot.InstallSnapshotRetransmitAfterLostReplies (0 ms)
 [ RUN      ] RaftSnapshot.InstalledNodeCanServeSnapshotAsLeader
 [       OK ] RaftSnapshot.InstalledNodeCanServeSnapshotAsLeader (2 ms)
-[----------] 13 tests from RaftSnapshot (8 ms total)
+[----------] 13 tests from RaftSnapshot (7 ms total)
 
 [----------] 7 tests from RaftSnapshotDisk
 [ RUN      ] RaftSnapshotDisk.RestartLoadsSnapshotThenReplaysTail
-[       OK ] RaftSnapshotDisk.RestartLoadsSnapshotThenReplaysTail (9 ms)
+[       OK ] RaftSnapshotDisk.RestartLoadsSnapshotThenReplaysTail (6 ms)
 [ RUN      ] RaftSnapshotDisk.TornSnapshotDiscarded
-[       OK ] RaftSnapshotDisk.TornSnapshotDiscarded (5 ms)
+[       OK ] RaftSnapshotDisk.TornSnapshotDiscarded (1 ms)
 [ RUN      ] RaftSnapshotDisk.TornTailAfterCompact
-[       OK ] RaftSnapshotDisk.TornTailAfterCompact (7 ms)
+[       OK ] RaftSnapshotDisk.TornTailAfterCompact (4 ms)
 [ RUN      ] RaftSnapshotDisk.SnapshotAndLogCombinedRecovery
-[       OK ] RaftSnapshotDisk.SnapshotAndLogCombinedRecovery (9 ms)
+[       OK ] RaftSnapshotDisk.SnapshotAndLogCombinedRecovery (4 ms)
 [ RUN      ] RaftSnapshotDisk.FileStoreClusterKeepsCommittingAfterCompaction
-[       OK ] RaftSnapshotDisk.FileStoreClusterKeepsCommittingAfterCompaction (337 ms)
+[       OK ] RaftSnapshotDisk.FileStoreClusterKeepsCommittingAfterCompaction (341 ms)
 [ RUN      ] RaftSnapshotDisk.LsmStoreClusterKeepsCommittingAfterCompaction
-[       OK ] RaftSnapshotDisk.LsmStoreClusterKeepsCommittingAfterCompaction (357 ms)
+[       OK ] RaftSnapshotDisk.LsmStoreClusterKeepsCommittingAfterCompaction (329 ms)
 [ RUN      ] RaftSnapshotDisk.ConcurrentSaveAndInstallKeepNewestSnapshot
-[       OK ] RaftSnapshotDisk.ConcurrentSaveAndInstallKeepNewestSnapshot (488 ms)
-[----------] 7 tests from RaftSnapshotDisk (1217 ms total)
+[       OK ] RaftSnapshotDisk.ConcurrentSaveAndInstallKeepNewestSnapshot (257 ms)
+[----------] 7 tests from RaftSnapshotDisk (946 ms total)
 
 [----------] 3 tests from RaftSnapshotDiskLsm
 [ RUN      ] RaftSnapshotDiskLsm.RestartLoadsSnapshotThenReplaysTail
-[       OK ] RaftSnapshotDiskLsm.RestartLoadsSnapshotThenReplaysTail (9 ms)
+[       OK ] RaftSnapshotDiskLsm.RestartLoadsSnapshotThenReplaysTail (6 ms)
 [ RUN      ] RaftSnapshotDiskLsm.TornTailAfterCompact
-[       OK ] RaftSnapshotDiskLsm.TornTailAfterCompact (11 ms)
+[       OK ] RaftSnapshotDiskLsm.TornTailAfterCompact (4 ms)
 [ RUN      ] RaftSnapshotDiskLsm.SnapshotAndLogCombinedRecovery
-[       OK ] RaftSnapshotDiskLsm.SnapshotAndLogCombinedRecovery (22 ms)
-[----------] 3 tests from RaftSnapshotDiskLsm (43 ms total)
+[       OK ] RaftSnapshotDiskLsm.SnapshotAndLogCombinedRecovery (7 ms)
+[----------] 3 tests from RaftSnapshotDiskLsm (19 ms total)
 
 [----------] 3 tests from RaftSnapshotStream
 [ RUN      ] RaftSnapshotStream.ChunkedStreamMatchesSerializeByteForByte
 [       OK ] RaftSnapshotStream.ChunkedStreamMatchesSerializeByteForByte (3 ms)
 [ RUN      ] RaftSnapshotStream.SaveStreamingWritesIdenticalFile
-[       OK ] RaftSnapshotStream.SaveStreamingWritesIdenticalFile (14 ms)
+[       OK ] RaftSnapshotStream.SaveStreamingWritesIdenticalFile (6 ms)
 [ RUN      ] RaftSnapshotStream.ReadInstalledSlicesMatchFileContent
-[       OK ] RaftSnapshotStream.ReadInstalledSlicesMatchFileContent (8 ms)
-[----------] 3 tests from RaftSnapshotStream (26 ms total)
+[       OK ] RaftSnapshotStream.ReadInstalledSlicesMatchFileContent (2 ms)
+[----------] 3 tests from RaftSnapshotStream (12 ms total)
 
 [----------] 1 test from RaftSnapshotResume
 [ RUN      ] RaftSnapshotResume.ContinuesAfterStoreRestart
-[       OK ] RaftSnapshotResume.ContinuesAfterStoreRestart (25 ms)
-[----------] 1 test from RaftSnapshotResume (25 ms total)
+[       OK ] RaftSnapshotResume.ContinuesAfterStoreRestart (8 ms)
+[----------] 1 test from RaftSnapshotResume (8 ms total)
 
 [----------] 2 tests from RaftSnapshotStore
 [ RUN      ] RaftSnapshotStore.StaleSaveNeverOverwritesNewerInstall
@@ -268,7 +268,7 @@
 [ RUN      ] RaftMembership.A4_UnreachableNewNodeIsNotAddedAndDoesNotCount
 [       OK ] RaftMembership.A4_UnreachableNewNodeIsNotAddedAndDoesNotCount (30000 ms)
 [ RUN      ] RaftMembership.A5_AddCommitsAndTakesEffect
-[       OK ] RaftMembership.A5_AddCommitsAndTakesEffect (5 ms)
+[       OK ] RaftMembership.A5_AddCommitsAndTakesEffect (4 ms)
 [ RUN      ] RaftMembership.A6_RemoveTakesEffectAndStopsCounting
 [       OK ] RaftMembership.A6_RemoveTakesEffectAndStopsCounting (0 ms)
 [ RUN      ] RaftMembership.A7_SecondChangeRejectedWhileOneInFlight
@@ -288,13 +288,13 @@
 [ RUN      ] RaftMembership.A14_ReadIndexRequiresQuorum
 [       OK ] RaftMembership.A14_ReadIndexRequiresQuorum (200 ms)
 [ RUN      ] RaftMembership.A15_SupraRuleHoldsAfterMembershipChange
-[       OK ] RaftMembership.A15_SupraRuleHoldsAfterMembershipChange (52 ms)
+[       OK ] RaftMembership.A15_SupraRuleHoldsAfterMembershipChange (50 ms)
 [ RUN      ] RaftMembership.A16_LeaderSelfRemovalStepsDownAfterCommit
 [       OK ] RaftMembership.A16_LeaderSelfRemovalStepsDownAfterCommit (0 ms)
 [ RUN      ] RaftMembership.A17_ConfigMessageCodec
 [       OK ] RaftMembership.A17_ConfigMessageCodec (0 ms)
 [ RUN      ] RaftMembership.A18_InstalledSnapshotCarriesConfig
-[       OK ] RaftMembership.A18_InstalledSnapshotCarriesConfig (7 ms)
+[       OK ] RaftMembership.A18_InstalledSnapshotCarriesConfig (5 ms)
 [ RUN      ] RaftMembership.A19_ConfigEntryTruncationRollsBackConfig
 [       OK ] RaftMembership.A19_ConfigEntryTruncationRollsBackConfig (300 ms)
 [ RUN      ] RaftMembership.A20_J2IsNotBypassedByLaterEntry
@@ -312,32 +312,32 @@
 [ RUN      ] RaftMembership.A26_InstalledSnapshotReseatsConfigBaseline
 [       OK ] RaftMembership.A26_InstalledSnapshotReseatsConfigBaseline (0 ms)
 [ RUN      ] RaftMembership.A27_ConcurrentMembershipChangesAreSerialized
-[       OK ] RaftMembership.A27_ConcurrentMembershipChangesAreSerialized (335 ms)
+[       OK ] RaftMembership.A27_ConcurrentMembershipChangesAreSerialized (337 ms)
 [ RUN      ] RaftMembership.A28_RemovedPeerIsReclaimedAfterCommit
 [       OK ] RaftMembership.A28_RemovedPeerIsReclaimedAfterCommit (0 ms)
 [ RUN      ] RaftMembership.A29_RemovedPeerKeepsReceivingUntilItAcks
 [       OK ] RaftMembership.A29_RemovedPeerKeepsReceivingUntilItAcks (0 ms)
-[----------] 29 tests from RaftMembership (33025 ms total)
+[----------] 29 tests from RaftMembership (33022 ms total)
 
 [----------] 4 tests from RaftMembershipDisk
 [ RUN      ] RaftMembershipDisk.B1_ConfigPersistsAcrossRestart
-[       OK ] RaftMembershipDisk.B1_ConfigPersistsAcrossRestart (57 ms)
+[       OK ] RaftMembershipDisk.B1_ConfigPersistsAcrossRestart (61 ms)
 [ RUN      ] RaftMembershipDisk.B2_ConfigCompactedThenRecoveredFromSnapshot
-[       OK ] RaftMembershipDisk.B2_ConfigCompactedThenRecoveredFromSnapshot (266 ms)
+[       OK ] RaftMembershipDisk.B2_ConfigCompactedThenRecoveredFromSnapshot (286 ms)
 [ RUN      ] RaftMembershipDisk.B3_CrashDuringConfigChangeKeepsConsistentTopology
-[       OK ] RaftMembershipDisk.B3_CrashDuringConfigChangeKeepsConsistentTopology (343 ms)
+[       OK ] RaftMembershipDisk.B3_CrashDuringConfigChangeKeepsConsistentTopology (347 ms)
 [ RUN      ] RaftMembershipDisk.B4_Rks1V1SnapshotStillLoads
 [       OK ] RaftMembershipDisk.B4_Rks1V1SnapshotStillLoads (0 ms)
-[----------] 4 tests from RaftMembershipDisk (667 ms total)
+[----------] 4 tests from RaftMembershipDisk (696 ms total)
 
 [----------] 3 tests from RaftMembershipDiskLsm
 [ RUN      ] RaftMembershipDiskLsm.B1_ConfigPersistsAcrossRestart
-[       OK ] RaftMembershipDiskLsm.B1_ConfigPersistsAcrossRestart (73 ms)
+[       OK ] RaftMembershipDiskLsm.B1_ConfigPersistsAcrossRestart (51 ms)
 [ RUN      ] RaftMembershipDiskLsm.B2_ConfigCompactedThenRecoveredFromSnapshot
-[       OK ] RaftMembershipDiskLsm.B2_ConfigCompactedThenRecoveredFromSnapshot (324 ms)
+[       OK ] RaftMembershipDiskLsm.B2_ConfigCompactedThenRecoveredFromSnapshot (289 ms)
 [ RUN      ] RaftMembershipDiskLsm.B3_CrashDuringConfigChangeKeepsConsistentTopology
-[       OK ] RaftMembershipDiskLsm.B3_CrashDuringConfigChangeKeepsConsistentTopology (357 ms)
-[----------] 3 tests from RaftMembershipDiskLsm (755 ms total)
+[       OK ] RaftMembershipDiskLsm.B3_CrashDuringConfigChangeKeepsConsistentTopology (369 ms)
+[----------] 3 tests from RaftMembershipDiskLsm (711 ms total)
 
 [----------] 17 tests from RaftPerf
 [ RUN      ] RaftPerf.A1_LockHeldDurableCallsAndSendsAreZero
@@ -361,48 +361,49 @@
 [ RUN      ] RaftPerf.A10_InFlightMuteWindowStaysBelowElectionTimeout
 [       OK ] RaftPerf.A10_InFlightMuteWindowStaysBelowElectionTimeout (0 ms)
 [ RUN      ] RaftPerf.A11_SlidingWindowOutOfOrderAcksAreIdempotent
-[       OK ] RaftPerf.A11_SlidingWindowOutOfOrderAcksAreIdempotent (20 ms)
+[       OK ] RaftPerf.A11_SlidingWindowOutOfOrderAcksAreIdempotent (25 ms)
 [ RUN      ] RaftPerf.A12_OverwrittenEntryIsNotReportedAsCommitted
 [       OK ] RaftPerf.A12_OverwrittenEntryIsNotReportedAsCommitted (4 ms)
 [ RUN      ] RaftPerf.A7_ConfigChangeStillCommits
 [       OK ] RaftPerf.A7_ConfigChangeStillCommits (0 ms)
 [ RUN      ] RaftPerf.A13_OverwriteDuringWaitIsNotReportedAsCommitted
-[       OK ] RaftPerf.A13_OverwriteDuringWaitIsNotReportedAsCommitted (56 ms)
+[       OK ] RaftPerf.A13_OverwriteDuringWaitIsNotReportedAsCommitted (57 ms)
 [ RUN      ] RaftPerf.A14_SyncDoesNotBlockAppends
-[       OK ] RaftPerf.A14_SyncDoesNotBlockAppends (152 ms)
+[       OK ] RaftPerf.A14_SyncDoesNotBlockAppends (153 ms)
 [ RUN      ] RaftPerf.A15_WaitPathFlusherHandoffIsNotLost
-[       OK ] RaftPerf.A15_WaitPathFlusherHandoffIsNotLost (877 ms)
+[       OK ] RaftPerf.A15_WaitPathFlusherHandoffIsNotLost (923 ms)
 [ RUN      ] RaftPerf.A16_NextFlushWaitsForInFlightSends
-[       OK ] RaftPerf.A16_NextFlushWaitsForInFlightSends (404 ms)
-[----------] 17 tests from RaftPerf (1536 ms total)
+[       OK ] RaftPerf.A16_NextFlushWaitsForInFlightSends (403 ms)
+[----------] 17 tests from RaftPerf (1587 ms total)
 
 [----------] 6 tests from RaftReactor
 [ RUN      ] RaftReactor.R1_SendReceivesReplyAsynchronously
-[       OK ] RaftReactor.R1_SendReceivesReplyAsynchronously (9 ms)
+[       OK ] RaftReactor.R1_SendReceivesReplyAsynchronously (7 ms)
 [ RUN      ] RaftReactor.R6_FrameIsNotRetransmittedWhileAwaitingReply
-[       OK ] RaftReactor.R6_FrameIsNotRetransmittedWhileAwaitingReply (402 ms)
+[       OK ] RaftReactor.R6_FrameIsNotRetransmittedWhileAwaitingReply (403 ms)
 [ RUN      ] RaftReactor.R2_TimeoutDropsCallback
-[       OK ] RaftReactor.R2_TimeoutDropsCallback (604 ms)
+[       OK ] RaftReactor.R2_TimeoutDropsCallback (602 ms)
 [ RUN      ] RaftReactor.R3_RemovePeerDropsInflightCallback
 [       OK ] RaftReactor.R3_RemovePeerDropsInflightCallback (202 ms)
 [ RUN      ] RaftReactor.R4_SlowPeerDoesNotBlockOthers
-[       OK ] RaftReactor.R4_SlowPeerDoesNotBlockOthers (6 ms)
+[       OK ] RaftReactor.R4_SlowPeerDoesNotBlockOthers (9 ms)
 [ RUN      ] RaftReactor.R5_StopDropsPendingCallbacks
-[       OK ] RaftReactor.R5_StopDropsPendingCallbacks (200 ms)
-[----------] 6 tests from RaftReactor (1426 ms total)
+[       OK ] RaftReactor.R5_StopDropsPendingCallbacks (202 ms)
+[----------] 6 tests from RaftReactor (1428 ms total)
 
 [----------] 4 tests from RaftLogStoreDiff
 [ RUN      ] RaftLogStoreDiff.FixedEdgeSequence
-[       OK ] RaftLogStoreDiff.FixedEdgeSequence (43 ms)
+[       OK ] RaftLogStoreDiff.FixedEdgeSequence (74 ms)
 [ RUN      ] RaftLogStoreDiff.RandomFuzz4000Steps
-[       OK ] RaftLogStoreDiff.RandomFuzz4000Steps (2391 ms)
+[       OK ] RaftLogStoreDiff.RandomFuzz4000Steps (2473 ms)
 [ RUN      ] RaftLogStoreDiff.SetBoundaryBackwardsMatchesFileLogStore
-[       OK ] RaftLogStoreDiff.SetBoundaryBackwardsMatchesFileLogStore (20 ms)
+[       OK ] RaftLogStoreDiff.SetBoundaryBackwardsMatchesFileLogStore (9 ms)
 [ RUN      ] RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction
-[two-compactions] lsm_flush_done=47 lsm_compaction_rounds=11 raft_compacts=24 last_included=9800 first=9801 last=10000
-[       OK ] RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction (765 ms)
-[----------] 4 tests from RaftLogStoreDiff (3221 ms total)
+[two-compactions] cross_engine_mismatches=0 steps=49 lsm_flush_done=47 lsm_compaction_rounds=11 raft_compacts=24 last_included=9800 first=9801 last=10000
+[two-compactions] reopen_dump_equal=1 reopened_last=10000
+[       OK ] RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction (856 ms)
+[----------] 4 tests from RaftLogStoreDiff (3413 ms total)
 
 [----------] Global test environment tear-down
-[==========] 165 tests from 24 test suites ran. (65451 ms total)
+[==========] 165 tests from 24 test suites ran. (57223 ms total)
 [  PASSED  ] 165 tests.
