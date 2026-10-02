@@ -8,8 +8,10 @@
 //   [kvCount:4]    then kvCount    x [klen:4][vlen:4][key][value]
 //   [dedupCount:4] then dedupCount x [clientId:8][requestId:8]
 //
-// One shared encoder/decoder is what makes KvStateMachine and LsmKvStateMachine
-// produce byte-identical payloads by construction (no duplicated codec to drift).
+// NOTE (M6.10 N5): KvStateMachine keeps its own (unchanged, baseline) codec, so
+// there ARE two implementations of this frozen format. They are pinned byte-for-byte
+// by Contract_SnapshotBytesIdenticalToMem + Contract_CrossRestore* in the test suite;
+// this header is the single place the LSM backend encodes/decodes.
 // decode() never trusts a wire count: every field is bounds-checked before it is
 // read (M6-I11: malformed/oversized keys must not read out of bounds or panic).
 #include <algorithm>

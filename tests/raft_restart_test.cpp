@@ -117,6 +117,9 @@ TEST(FileLogStore, TruncatesTornTail) {
   std::filesystem::remove_all(dir);
 }
 
+// 注意（M6.10 N9）：这些 LsmLogStore 孪生**不用 RAFTK_HAVE_LSM 包夹**——未把 lsm 编进
+// 二进制时 LsmLogStore 的构造函数会抛（fail-loud），本文件据此失败而不是静默 skip。
+// 这是有意的：门禁要求「未配置 lsm ⇒ 明确报错，绝不静默降级」。
 // ---- LsmLogStore 孪生（M6.3）----------------------------------------------
 
 TEST(LsmLogStore, RestartRestoresMetaAndLog) {

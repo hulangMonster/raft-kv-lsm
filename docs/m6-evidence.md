@@ -942,7 +942,7 @@ ASan 全量（HEAD）              /tmp/r3-asan-tests2.log： [  PASSED  ] 122 t
 | 全量单测（Release，含 lsm） | **149/149 PASS**（原 122 + 新 27） | `docs/raw/m6.9.2-green-full.log` |
 | 新用例连跑 | `--gtest_repeat=200` -> **EXIT=0；5400 OK（200×27）；0 fail** | `docs/raw/m6.9.2-repeat200.log` |
 | 新用例崩溃/幂等语义 | fork+`_exit(0)`（kill -9 等价）-> 一致前缀；`sync()` 后全 durable；WAL 撕裂尾恢复一致前缀；restore 原子 | `docs/raw/m6.9.2-green-full.log` |
-| 四门禁 `--log-engine lsm --state-engine lsm` | `raft_fault` 10/10、`raft_snapshot_fault` 10/10、`raft_membership_fault` 10/10 PASS；`raft_e2e` 9/10（1 次既有 flake，见 §2） | `docs/raw/m6.9.3-gates-run.log` |
+| 四门禁 `--log-engine lsm --state-engine lsm` | `raft_fault` 10/10、`raft_snapshot_fault` 10/10、`raft_membership_fault` 10/10 真 PASS；`raft_e2e` **非「10 轮通过」**：PHASE A（lsm/lsm）只跑 2 轮 = 1 PASS / 1 FAIL（既有 harness flake，见 §2）。此前误记的 `raft_e2e 9/10` 实为 **mem 状态机臂**结果，正确归属见 §2 | `docs/raw/m6.9.3-gates-run.log`、`docs/raw/m6.9.3-e2e-asis.log` |
 | kill -9 后 `verify missing 0` | 杀 leader 前后均 `missing 0` | `docs/raw/m6.9.3-kill9.log` |
 | `--state-engine=mem`（lsm 日志）链路 | `raft_e2e` 2/2、`raft_fault` 2/2、`raft_snapshot_fault` 2/2、`raft_membership_fault` 2/2 PASS | `docs/raw/m6.9.3-gates-run.log` |
 | 未知 `--state-engine` | `exit 2` + `unknown --state-engine: bogus (expected mem|lsm)` | `docs/raw/m6.9.3-gates-run.log` |
@@ -959,15 +959,21 @@ TSan 147 = 149 − 2：两个 fork+`_exit` 崩溃用例在 `-fsanitize=thread` �
 
 机制（诊断副本逐轮捕获；仓库脚本未改）：`PUT115 rc=1 out=[NOT_LEADER]`。`wait_leader` 刚看到 leader 时，CLI 对第 115 行 `put hello world` 的 redirect 预算（3 次 / 1s）在领导权切换窗口内耗尽 -> CLI 返回 `NOT_LEADER`（非 0）；`set -euo pipefail` 下 `out=$(...)` 直接中止，`expect` 从不执行 => 日志近乎空白。三个 node 日志只有启动 4 行、无错误（现场已保留）。
 
-| 配置/脚本 | 轮数 | pass | fail | 出处 |
-|---|---|---|---|---|
-| lsm/lsm，诊断副本（打印 rc+输出） | 40 | 36 | 4 (10%) | `docs/raw/m6.9.3-e2e-flake-rate.log` |
-| file/mem，诊断副本 | 40 | 36 | 4 (10%) | 同上 |
-| lsm/lsm，仓库脚本**原样** | 20 | 15 | 5 (25%) | `docs/raw/m6.9.3-e2e-asis.log` |
-| lsm 日志 + mem 状态机，仓库脚本原样 | 10 | 9 | 1 (10%) | 同上 |
-| **M6.9 之前的原版** `924492e:scripts/raft_e2e.sh`（无 `--state-engine`，默认 file/mem） | 20 | 19 | 1 (5%) | `docs/raw/m6.9.3-e2e-orig-924492e.log` |
+| 臂 / 配置 | 轮数 | pass | fail | 失败率 | 出处 |
+|---|---|---|---|---|---|
+| **基准臂**：M6.9 之前原版 `1463620` 脚本，默认 file/mem | 12 | 11 | 1 | 8.3% | 评审者实测 |
+| **本仓 lsm/lsm**（`a507873` 原样） | 12 | 11 | 1 | 8.3% | 评审者实测 |
+| **本仓 file/mem**（`a507873` 原样） | 12 | 10 | 2 | 16.7% | 评审者实测 |
+| 诊断副本 lsm/lsm（打印 rc+输出） | 40 | 36 | 4 | 10% | `docs/raw/m6.9.3-e2e-flake-rate.log` |
+| 诊断副本 file/mem | 40 | 36 | 4 | 10% | 同上 |
+| 仓库原样 lsm/lsm（PHASE A 首次门禁） | 2 | 1 | 1 | 50% | `docs/raw/m6.9.3-gates-run.log` |
+| 仓库原样 lsm/lsm（as-is 补跑） | 20 | 15 | 5 | 25% | `docs/raw/m6.9.3-e2e-asis.log` |
+| 仓库原样 lsm 日志 + mem 状态机 | 10 | 9 | 1 | 10% | 同上 |
+| 我的 M6.9 之前原版 `924492e` 脚本（无 `--state-engine`，file/mem） | 20 | 19 | 1 | 5% | `docs/raw/m6.9.3-e2e-orig-924492e.log` |
 
-结论：**既有 harness flake，两条状态机链路与 M6.9 之前的原版脚本同现**；M6.9 未引入，也未改动任何判据（脚本只加 `--state-engine` 透传）。按纪律**未静默重试、未放宽判据**，原样结果如实登记。
+（评审者三臂的原始日志不在本仓，数字来自评审报告；本仓可复核的原始行在 `docs/raw/m6.9.3-e2e-*`。）
+
+结论：**三臂**（M6.9 之前原版 8.3% / 本仓 lsm/lsm 8.3% / 本仓 file/mem 16.7%）失败率同量级 ⇒ **既有 harness flake，不是 M6.9 引入**。M6.9 未改动任何判据（脚本只加 `--state-engine` 透传）；按纪律**未静默重试、未放宽判据**，原样结果如实登记。
 
 ### 3) 负结果与代价
 
@@ -988,3 +994,20 @@ TSan 147 = 149 − 2：两个 fork+`_exit` 崩溃用例在 `-fsanitize=thread` �
 | — | file -> lsm 状态机数据迁移工具 | N-E，YAGNI |
 | — | `raft_e2e.sh` 既有 flake 未修 | 超出 M6.9 范围；原样跑并登记比率 |
 | — | P99/延迟直方图 | 与 M6.8 的未做项一致 |
+
+
+### 5) M6.10 中间修订登记（B2/N2/N3/N5/N6/N8/N9；最终验收待 lsm 新 sha 后重跑）
+
+| 项 | 处置 | 证据/位置 |
+|---|---|---|
+| B2 证据归属错配 | 已更正：`raft_e2e` 的 `9/10` 原为 **mem 状态机臂**；lsm/lsm 的 PHASE A 实为 **1/2**；三臂对照与逐轮表见 §2 | 本文件 §1/§2 |
+| N2 `setBoundary` 向后移动不等价 | 已修：按 FileLogStore「由 entries_ 推导」的语义重算 `lastIndex_`/`lastTerm_`，并消除 `termAt()` 对空 `terms_` 的越界读；新增跨引擎对照用例 `RaftLogStoreDiff.SetBoundaryBackwardsMatchesFileLogStore` | `src/raft/lsm_log_store.cpp`、`tests/raft_log_store_diff_test.cpp` |
+| N3 README 计数 | `121/121` -> `158/158`（与 HEAD 一致） | `README.md` |
+| N5 codec 措辞 | 原文「one shared codec, no duplication to drift」改为：mem 基线保留自己的 codec，两个实现由逐字节/交叉 restore 测试钉住 | `src/kv/kv_snapshot_view.h` |
+| N6 shutdown sync | 检查 `LsmKvStateMachine::sync()` 返回值并打印 warning；`_Exit`/Close 的 durable 表述改为条件式 | `src/main_raft_node.cpp` |
+| N8 跨引擎差分测试 | 已并入仓库（两引擎同一 body：固定边界序列 + 4000 步随机 append/appendNoSync+sync/truncate/compact/setBoundary；每步比较 last/termAt/slice 全口径） | `tests/raft_log_store_diff_test.cpp` |
+| N9a `stats().truncates` 口径 | 修正：`stat_truncates_` 移到 E4 no-op 之后，只统计**真的删除条目**的 truncate；注释同步 | `src/raft/lsm_log_store.{h,cpp}` |
+| N9b `raft_restart_test` 的 Lsm 孪生 | 登记：未用 `RAFTK_HAVE_LSM` 包夹 => 未配置 lsm 的构建会 fail-loud 而非 skip（有意，符合「未配置 lsm 绝不静默降级」） | `tests/raft_restart_test.cpp` 注释 |
+| BLOCKER（M6.10.1） | lsm flush/Close 竞态留下孤儿 SST（无 MANIFEST），`DB::Open` Corruption；既有 `LsmLogStore` 同受影响。B1 端到端 reopen 验证被阻塞，未宣布通过 | `docs/raw/m6.10.1-BLOCKER-lsm-flush-close.md` |
+
+**未重跑（让路给 lsm 修复代理；新 sha 到位后统一补）**：N2/N6/N8/N9 的构建与用例、N1 stall 实测、N7 footprint 复标定，以及全部最终验收（Release 0 warning + 全量用例、ASan 全量、TSan 双口径、四脚本原样 ≥10 轮、kill -9 -> `verify missing 0`、`bench_m6_ab.sh` 三臂 A/B）。

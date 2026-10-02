@@ -98,7 +98,7 @@ $CLI                                       # 不带命令 = 交互 REPL（put/ge
 
 ```bash
 ./build/bin/raftkv_tests          # M1：13/13（零依赖自测）
-./build/bin/raftkv_raft_tests     # M2–M6：121/121（gtest；含 A 组契约、R 组 Reactor、M6 的 LsmLogStore 用例）
+./build/bin/raftkv_raft_tests     # M2–M6.10：158/158（gtest；含 A 组契约、R 组 Reactor、M6 的 LsmLogStore 与 LsmKvStateMachine 用例）
 
 # 端到端 + 故障注入（脚本会自己起/停节点、随机端口、每轮 verify missing 0）
 ./scripts/raft_e2e.sh                              # 3 节点基本路径
