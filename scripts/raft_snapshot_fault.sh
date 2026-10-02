@@ -15,10 +15,13 @@ REPEAT=50
 # M6.6（C6/D9）：日志引擎 = file|lsm，默认 file。选择顺序：--log-engine 参数 > RAFTK_LOG_ENGINE > file。
 # 见 docs/m6-evidence.md §M6.5-D1：本机→VM 通道上 `VAR=value cmd` 前缀赋值不可靠，故 CLI 参数为权威通道。
 LOG_ENGINE="${RAFTKV_LOG_ENGINE:-file}"
+STATE_ENGINE="${RAFTKV_STATE_ENGINE:-mem}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --log-engine=*) LOG_ENGINE="${1#*=}"; shift;;
     --log-engine)   LOG_ENGINE="${2:-}"; shift 2;;
+    --state-engine=*) STATE_ENGINE="${1#*=}"; shift;;
+    --state-engine)   STATE_ENGINE="${2:-}"; shift 2;;
     --repeat)       REPEAT="${2:-50}"; shift 2;;
     *) echo "unknown argument: $1" >&2; exit 2;;
   esac
@@ -27,7 +30,11 @@ if [[ "$LOG_ENGINE" != "file" && "$LOG_ENGINE" != "lsm" ]]; then
   echo "unknown --log-engine: $LOG_ENGINE (expected file|lsm)" >&2
   exit 2
 fi
-echo "engine=$LOG_ENGINE" >&2
+if [[ "$STATE_ENGINE" != "mem" && "$STATE_ENGINE" != "lsm" ]]; then
+  echo "unknown --state-engine: $STATE_ENGINE (expected mem|lsm)" >&2
+  exit 2
+fi
+echo "engine=$LOG_ENGINE state_engine=$STATE_ENGINE" >&2
 
 BASE=$((19000 + ($$ % 600)))
 PORT1=$BASE
@@ -70,10 +77,10 @@ node_port() {
 
 start_node() {
   local id=$1
-  RAFTK_LOG_ENGINE="$LOG_ENGINE" \
+  RAFTK_LOG_ENGINE="$LOG_ENGINE" RAFTK_STATE_ENGINE="$STATE_ENGINE" \
   "$BIN/raftkv_raft_node" --id "$id" --port "$(node_port "$id")" \
     --peers "$PEERS" --data-dir "$WORK/node$id" --snapshot-threshold "$THRESHOLD" \
-    --log-engine "$LOG_ENGINE" \
+    --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" \
     >"$WORK/node$id.log" 2>&1 &
   PIDS[$id]=$!
 }

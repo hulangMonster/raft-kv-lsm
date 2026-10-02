@@ -1,0 +1,35 @@
+# M6.9.3 - repo scripts/raft_e2e.sh run AS-IS (no modification, --state-engine passthrough only)
+# lsm/lsm 20 rounds + mem-state 10 rounds
+lsm round 1 rc=1 pass=0 fail=1
+lsm round 2 rc=0 pass=1 fail=1
+lsm round 3 rc=1 pass=1 fail=2
+lsm round 4 rc=0 pass=2 fail=2
+lsm round 5 rc=1 pass=2 fail=3
+lsm round 6 rc=0 pass=3 fail=3
+lsm round 7 rc=1 pass=3 fail=4
+lsm round 8 rc=0 pass=4 fail=4
+lsm round 9 rc=0 pass=5 fail=4
+lsm round 10 rc=0 pass=6 fail=4
+lsm round 11 rc=0 pass=7 fail=4
+lsm round 12 rc=1 pass=7 fail=5
+lsm round 13 rc=0 pass=8 fail=5
+lsm round 14 rc=0 pass=9 fail=5
+lsm round 15 rc=0 pass=10 fail=5
+lsm round 16 rc=0 pass=11 fail=5
+lsm round 17 rc=0 pass=12 fail=5
+lsm round 18 rc=0 pass=13 fail=5
+lsm round 19 rc=0 pass=14 fail=5
+lsm round 20 rc=0 pass=15 fail=5
+ASIS_RESULT lsm cfg=[--log-engine lsm --state-engine lsm] N=20 pass=15 fail=5
+mem round 1 rc=1 pass=0 fail=1
+mem round 2 rc=0 pass=1 fail=1
+mem round 3 rc=0 pass=2 fail=1
+mem round 4 rc=0 pass=3 fail=1
+mem round 5 rc=0 pass=4 fail=1
+mem round 6 rc=0 pass=5 fail=1
+mem round 7 rc=0 pass=6 fail=1
+mem round 8 rc=0 pass=7 fail=1
+mem round 9 rc=0 pass=8 fail=1
+mem round 10 rc=0 pass=9 fail=1
+ASIS_RESULT mem cfg=[--log-engine lsm --state-engine mem] N=10 pass=9 fail=1
+ASIS_DONE

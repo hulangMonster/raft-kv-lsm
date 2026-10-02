@@ -1,0 +1,15 @@
+# M6.9.3 ASan (build-asan, RelWithDebInfo + ENABLE_ASAN=ON)
+# command: cd build-asan && cmake .. && make -j8 && ASAN_OPTIONS=detect_leaks=1 ./bin/raftkv_raft_tests
+
+START_ASAN 2026年 10月 02日 星期五 14:37:08 CST
+asan_cmake_rc=0 asan_build_rc=0 warnings=0
+asan_tests_rc=0 passed=1
+[  PASSED  ] 149 tests.
+asan_reports=0
+asan_leak_reports=0
+END_ASAN 2026年 10月 02日 星期五 14:38:44 CST
+
+# test summary lines:
+[==========] Running 149 tests from 21 test suites.
+[==========] 149 tests from 21 test suites ran. (41764 ms total)
+[  PASSED  ] 149 tests.

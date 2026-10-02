@@ -1,0 +1,25 @@
+# Failure scenes: PUT115 rc=1 out=[NOT_LEADER]
+--- /tmp/dbgdiag-lsm-2.log ---
+engine=lsm state_engine=lsm
+PUT115 rc=1 out=[NOT_LEADER]
+FAIL: put hello: expected 'OK', got 'NOT_LEADER'
+FAIL_AT_LINE=119 rc=1 cmd=return 1 out=[NOT_LEADER]
+WORK_PRESERVED=/tmp/tmp.Tjej972rxE
+--- /tmp/dbgdiag-lsm-16.log ---
+engine=lsm state_engine=lsm
+PUT115 rc=1 out=[NOT_LEADER]
+FAIL: put hello: expected 'OK', got 'NOT_LEADER'
+FAIL_AT_LINE=119 rc=1 cmd=return 1 out=[NOT_LEADER]
+WORK_PRESERVED=/tmp/tmp.Fk6JNgtaAA
+--- /tmp/dbgdiag-lsm-21.log ---
+engine=lsm state_engine=lsm
+PUT115 rc=1 out=[NOT_LEADER]
+FAIL: put hello: expected 'OK', got 'NOT_LEADER'
+FAIL_AT_LINE=119 rc=1 cmd=return 1 out=[NOT_LEADER]
+WORK_PRESERVED=/tmp/tmp.wpV2xdVFfY
+--- /tmp/dbgdiag-lsm-35.log ---
+engine=lsm state_engine=lsm
+PUT115 rc=1 out=[NOT_LEADER]
+FAIL: put hello: expected 'OK', got 'NOT_LEADER'
+FAIL_AT_LINE=119 rc=1 cmd=return 1 out=[NOT_LEADER]
+WORK_PRESERVED=/tmp/tmp.fFKcRn6oOx

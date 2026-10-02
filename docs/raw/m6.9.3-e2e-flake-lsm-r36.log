@@ -1,0 +1,3 @@
+engine=lsm state_engine=lsm
+FAIL_AT_LINE=115 rc=1 cmd=out=$(cli --host 127.0.0.1 --port "$PORT1" put hello world)
+WORK_PRESERVED=/tmp/tmp.6gG5OOtpQR

@@ -1,0 +1,25 @@
+# M6.9.3 attribution - PRE-M6.9 original scripts/raft_e2e.sh from 924492e (no --state-engine), default file/mem
+# only change to the extracted copy: ROOT pinned to the repo (it lives in /tmp).
+patched ROOT only
+orig round 1 rc=0 pass=1 fail=0
+orig round 2 rc=0 pass=2 fail=0
+orig round 3 rc=0 pass=3 fail=0
+orig round 4 rc=1 pass=3 fail=1
+orig round 5 rc=0 pass=4 fail=1
+orig round 6 rc=0 pass=5 fail=1
+orig round 7 rc=0 pass=6 fail=1
+orig round 8 rc=0 pass=7 fail=1
+orig round 9 rc=0 pass=8 fail=1
+orig round 10 rc=0 pass=9 fail=1
+orig round 11 rc=0 pass=10 fail=1
+orig round 12 rc=0 pass=11 fail=1
+orig round 13 rc=0 pass=12 fail=1
+orig round 14 rc=0 pass=13 fail=1
+orig round 15 rc=0 pass=14 fail=1
+orig round 16 rc=0 pass=15 fail=1
+orig round 17 rc=0 pass=16 fail=1
+orig round 18 rc=0 pass=17 fail=1
+orig round 19 rc=0 pass=18 fail=1
+orig round 20 rc=0 pass=19 fail=1
+ORIG_RESULT pre-M6.9 raft_e2e.sh (default file/mem) N=20 pass=19 fail=1
+ORIG_DONE

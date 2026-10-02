@@ -1,0 +1,19 @@
+# M6.9.3 Release clean rebuild (fresh build-m69-release, -DCMAKE_BUILD_TYPE=Release)
+# command: rm -rf build-m69-release && cmake -S . -B build-m69-release -DCMAKE_BUILD_TYPE=Release -DRAFTKV_LSM_DIR=/tmp/lsm-pin-f06a44d && make -C build-m69-release -j8
+
+START_RELEASE 2026年 10月 02日 星期五 14:40:55 CST
+rel_cmake_rc=0 rel_build_rc=0 warnings=0 errors=0
+rel_raft_tests_rc=0 passed=1
+[  PASSED  ] 149 tests.
+rel_m1_tests_rc=0
+all tests passed (13)
+END_RELEASE 2026年 10月 02日 星期五 14:43:24 CST
+
+# build warning/error lines (must be none):
+# raftkv_raft_tests summary:
+[==========] Running 149 tests from 21 test suites.
+[==========] 149 tests from 21 test suites ran. (40173 ms total)
+[  PASSED  ] 149 tests.
+# raftkv_tests (M1) summary:
+PASS codec_rejects_key_too_long
+all tests passed (13)

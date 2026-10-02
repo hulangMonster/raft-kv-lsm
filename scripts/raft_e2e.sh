@@ -23,10 +23,13 @@ PIDS=()
 # 为什么 CLI 参数优先：本 VM 的自动化通道上 `VAR=value cmd` 的前缀赋值不可靠（见
 # docs/m6-evidence.md §M6.5-D1）—— 显式参数是唯一能端到端验证的通道；环境变量仍然照传（C7）。
 LOG_ENGINE="${RAFTKV_LOG_ENGINE:-file}"
+STATE_ENGINE="${RAFTKV_STATE_ENGINE:-mem}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --log-engine=*) LOG_ENGINE="${1#*=}"; shift;;
     --log-engine)   LOG_ENGINE="${2:-}"; shift 2;;
+    --state-engine=*) STATE_ENGINE="${1#*=}"; shift;;
+    --state-engine)   STATE_ENGINE="${2:-}"; shift 2;;
     *) echo "unknown argument: $1" >&2; exit 2;;
   esac
 done
@@ -34,7 +37,11 @@ if [[ "$LOG_ENGINE" != "file" && "$LOG_ENGINE" != "lsm" ]]; then
   echo "unknown --log-engine: $LOG_ENGINE (expected file|lsm)" >&2
   exit 2
 fi
-echo "engine=$LOG_ENGINE" >&2
+if [[ "$STATE_ENGINE" != "mem" && "$STATE_ENGINE" != "lsm" ]]; then
+  echo "unknown --state-engine: $STATE_ENGINE (expected mem|lsm)" >&2
+  exit 2
+fi
+echo "engine=$LOG_ENGINE state_engine=$STATE_ENGINE" >&2
 cleanup() {
   for id in 1 2 3; do
     if [[ -n "${PIDS[$id]:-}" ]]; then kill -9 "${PIDS[$id]}" 2>/dev/null || true; fi
@@ -53,9 +60,9 @@ node_port() {
 
 start_node() {
   local id=$1
-  RAFTK_LOG_ENGINE="$LOG_ENGINE" \
+  RAFTK_LOG_ENGINE="$LOG_ENGINE" RAFTK_STATE_ENGINE="$STATE_ENGINE" \
   "$BIN/raftkv_raft_node" --id "$id" --port "$(node_port "$id")" \
-    --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" \
+    --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine "$LOG_ENGINE" --state-engine "$STATE_ENGINE" \
     >"$WORK/node$id.log" 2>&1 &
   PIDS[$id]=$!
 }

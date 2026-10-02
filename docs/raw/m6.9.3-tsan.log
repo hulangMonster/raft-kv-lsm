@@ -1,0 +1,36 @@
+# M6.9.3 TSan (build-tsan, RelWithDebInfo + ENABLE_TSAN=ON)
+# canonical: TSAN_OPTIONS=suppressions=tests/tsan.supp setarch $(uname -m) -R ./build-tsan/bin/raftkv_raft_tests
+# no-supp  : TSAN_OPTIONS=suppressions=/dev/null        setarch $(uname -m) -R ./build-tsan/bin/raftkv_raft_tests
+
+START_TSAN 2026年 10月 02日 星期五 14:38:44 CST
+tsan_cmake_rc=0 tsan_build_rc=0 warnings=0
+--- canonical (with suppressions) ---
+tsan_canon_rc=0 passed=1 warnings=0 races=0
+[  PASSED  ] 147 tests.
+--- no suppression ---
+tsan_nosupp_rc=66 passed=1 warnings=16 races=0
+[  PASSED  ] 147 tests.
+ThreadSanitizer: reported 16 warnings
+--- narrow new-code paths ---
+tsan_narrow_rc=0 passed=1 warnings=0 races=0
+END_TSAN 2026年 10月 02日 星期五 14:40:55 CST
+
+# type counts (NO suppression):
+      8 double lock of a mutex (pid=87237)
+      8 lock-order-inversion (potential deadlock) (pid=87237)
+# type counts (WITH suppression): (none)
+
+# summaries:
+## canonical:
+[==========] Running 147 tests from 21 test suites.
+[==========] 147 tests from 21 test suites ran. (47725 ms total)
+[  PASSED  ] 147 tests.
+## no-supp:
+[==========] Running 147 tests from 21 test suites.
+[==========] 147 tests from 21 test suites ran. (46781 ms total)
+[  PASSED  ] 147 tests.
+ThreadSanitizer: reported 16 warnings
+## narrow new-code:
+[==========] Running 25 tests from 3 test suites.
+[==========] 25 tests from 3 test suites ran. (456 ms total)
+[  PASSED  ] 25 tests.

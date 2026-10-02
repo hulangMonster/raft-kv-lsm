@@ -1,0 +1,5 @@
+round 1 PASS rc=0
+round 2 PASS rc=0
+round 3 PASS rc=0
+round 4 FAIL rc=1
+LOOP_END

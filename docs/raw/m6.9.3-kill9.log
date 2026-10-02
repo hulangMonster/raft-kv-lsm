@@ -1,0 +1,7 @@
+before kill -9: verify missing 0 OK (leader=3)
+/tmp/m6.9.3-kill9.sh: line 24: 48491 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$(port $id)" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine lsm --state-engine lsm > "$WORK/node$id.log" 2>&1
+after kill -9: verify missing 0 OK (new leader=2)
+kill9_verify: PASS
+/tmp/m6.9.3-kill9.sh: line 11: 48488 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$(port $id)" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine lsm --state-engine lsm > "$WORK/node$id.log" 2>&1
+/tmp/m6.9.3-kill9.sh: line 11: 48489 Killed                  "$BIN/raftkv_raft_node" --id "$id" --port "$(port $id)" --peers "$PEERS" --data-dir "$WORK/node$id" --log-engine lsm --state-engine lsm > "$WORK/node$id.log" 2>&1
+KILL9_EXIT=$?
