@@ -1,0 +1,38 @@
+# M6.10.5 (2) 两套 compact 交互：store 级跨引擎对照用例
+# command: ./build/bin/raftkv_raft_tests --gtest_filter=RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction
+
+Note: Google Test filter = RaftLogStoreDiff.*
+[==========] Running 4 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 4 tests from RaftLogStoreDiff
+[ RUN      ] RaftLogStoreDiff.FixedEdgeSequence
+[       OK ] RaftLogStoreDiff.FixedEdgeSequence (69 ms)
+[ RUN      ] RaftLogStoreDiff.RandomFuzz4000Steps
+[       OK ] RaftLogStoreDiff.RandomFuzz4000Steps (2774 ms)
+[ RUN      ] RaftLogStoreDiff.SetBoundaryBackwardsMatchesFileLogStore
+[       OK ] RaftLogStoreDiff.SetBoundaryBackwardsMatchesFileLogStore (27 ms)
+[ RUN      ] RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction
+[two-compactions] lsm_flush_done=47 lsm_compaction_rounds=11 raft_compacts=24 last_included=9800 first=9801 last=10000
+[       OK ] RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction (776 ms)
+[----------] 4 tests from RaftLogStoreDiff (3649 ms total)
+
+[----------] Global test environment tear-down
+[==========] 4 tests from 1 test suite ran. (3649 ms total)
+[  PASSED  ] 4 tests.
+
+# cluster-level driver (scripts/raft_two_compactions.sh --rounds 6):
+# raft 前缀压缩（周期快照 + log_.compact()）× lsm 后台 compaction（memtable 64 KiB）
+# two-compactions probe bin=/home/tengyujie/raft-kv-lsm/build/bin rounds=6 n=20000 pipeline=64 threshold=1000 write_buffer_bytes=65536
+# 2026-10-02T19:57:28+08:00 uname=Linux 6.8.0-138-generic nproc=8 load=2.63
+# leader node=3
+TCOMP round=1 verify=[missing 0] snapshot_index=19465 lsm_compaction_rounds=21 lsm_flush_done=81 lsm_sst_files=3 last_applied=20219
+TCOMP round=2 verify=[missing 0] snapshot_index=39754 lsm_compaction_rounds=44 lsm_flush_done=168 lsm_sst_files=5 last_applied=40234
+TCOMP round=3 verify=[missing 0] snapshot_index=59813 lsm_compaction_rounds=66 lsm_flush_done=251 lsm_sst_files=3 last_applied=60243
+TCOMP round=4 verify=[missing 0] snapshot_index=79721 lsm_compaction_rounds=87 lsm_flush_done=333 lsm_sst_files=4 last_applied=80258
+TCOMP round=5 verify=[missing 0] snapshot_index=99787 lsm_compaction_rounds=113 lsm_flush_done=416 lsm_sst_files=4 last_applied=100262
+TCOMP round=6 verify=[missing 0] snapshot_index=119834 lsm_compaction_rounds=140 lsm_flush_done=501 lsm_sst_files=3 last_applied=120266
+# restart phase (kill -9 all, restart, verify)
+TCOMP post_restart verify=[missing 0] snapshot_index=119918 lsm_compaction_rounds=0 lsm_flush_done=0 last_applied=120267
+TCOMP_POSITIVE_MARKERS lsm_compaction_rounds_max=140 snapshot_index_max=119834 write_buffer_bytes=65536
+[TWO_COMPACTIONS_OK]
+# done 2026-10-02T20:01:54+08:00

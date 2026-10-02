@@ -9,6 +9,8 @@
 #include <gtest/gtest.h>
 
 #include <climits>
+#include <cstdio>
+#include <cstdlib>
 #include <cstdint>
 #include <filesystem>
 #include <random>
@@ -228,6 +230,144 @@ TEST(RaftLogStoreDiff, SetBoundaryBackwardsMatchesFileLogStore) {
   EXPECT_EQ(B.firstIndex(), static_cast<Index>(1));
   EXPECT_EQ(B.termAt(1), kNoTerm);
   EXPECT_TRUE(B.slice(1, 10, SIZE_MAX).empty());
+  std::filesystem::remove_all(da);
+  std::filesystem::remove_all(db);
+}
+
+namespace {
+
+// M6.10.5 (2): the lsm memtable size is a construction-time engine option that
+// LsmLogStore otherwise leaves at its default; the diagnostic env knob is the
+// only seam (see src/raft/lsm_log_store.cpp). Scope it tightly so unrelated
+// tests in this binary keep the production default.
+class WriteBufferGuard {
+ public:
+  explicit WriteBufferGuard(const char* v) {
+    const char* old = ::getenv("RAFTKV_LSM_WRITE_BUFFER_BYTES");
+    if (old != nullptr) old_ = old;
+    ::setenv("RAFTKV_LSM_WRITE_BUFFER_BYTES", v, 1);
+  }
+  ~WriteBufferGuard() {
+    if (old_.empty()) {
+      ::unsetenv("RAFTKV_LSM_WRITE_BUFFER_BYTES");
+    } else {
+      ::setenv("RAFTKV_LSM_WRITE_BUFFER_BYTES", old_.c_str(), 1);
+    }
+  }
+  WriteBufferGuard(const WriteBufferGuard&) = delete;
+  WriteBufferGuard& operator=(const WriteBufferGuard&) = delete;
+
+ private:
+  std::string old_;
+};
+
+// Pull one counter out of LsmLogStore::engineStatsFragment() ("k=v k=v ...").
+uint64_t counterFrom(const std::string& frag, const std::string& key) {
+  const size_t p = frag.find(key + "=");
+  if (p == std::string::npos) return 0;
+  return std::strtoull(frag.c_str() + p + key.size() + 1, nullptr, 10);
+}
+
+}  // namespace
+
+// M6.10.5 (2): raft prefix compaction (log_.compact()) interleaved with real lsm
+// background compaction.
+//
+// Counterfactual self-check: is this actually exercising the interaction, or is
+// it self-confirming? The memtable is forced to 64 KiB, so a few hundred entries
+// per flush produce L0 files far faster than background compaction drains them
+// and the DEFAULT level0_file_num_compaction_trigger (4) fires. Two positive
+// markers prove the paths ran: the ENGINE's own lsm_compaction_rounds counter
+// must be > 0, and the raft-side compact() counter must be > 0. Without them this
+// test would be vacuous, so it asserts them rather than assuming them.
+TEST(RaftLogStoreDiff, RaftPrefixCompactionUnderLsmBackgroundCompaction) {
+  WriteBufferGuard guard("65536");
+  const std::string da = tempDir("fa5");
+  const std::string db = tempDir("lb5");
+  FileLogStore A(da);
+  Index compactCalls = 0;
+  {
+    LsmLogStore B(db);
+    Index next = 1;
+    int step = 0;
+    int mismatches = 0;
+    for (int round = 1; round <= 25; ++round) {
+      Op ap;
+      ap.kind = 0;
+      for (int j = 0; j < 400; ++j) {
+        ap.entries.push_back(E(next, static_cast<Term>(round),
+                               "k" + std::to_string(next), "v" + std::to_string(next)));
+        ++next;
+      }
+      compareStep(A, B, ap, step++, &mismatches);
+
+      if (round >= 2) {
+        Op cp;
+        cp.kind = 4;
+        cp.index = A.lastIndex() - 200;  // keep a 200-entry tail
+        cp.term = A.termAt(cp.index);
+        ASSERT_NE(cp.term, kNoTerm);
+        const Index before = A.lastIncludedIndex();
+        compareStep(A, B, cp, step++, &mismatches);
+        if (A.lastIncludedIndex() > before) ++compactCalls;
+
+        // (3) the prefix raft compacted away must be unreadable in BOTH engines.
+        // The dropped range is [1, lastIncluded): the boundary index itself is
+        // NOT dropped data -- both stores retain its term (lastIncludedTerm), which
+        // is what the AppendEntries consistency check needs at the boundary.
+        const Index lii = A.lastIncludedIndex();
+        ASSERT_GT(lii, 0u);
+        for (Index k : {static_cast<Index>(1), static_cast<Index>(lii / 2)}) {
+          if (k >= lii) continue;
+          ASSERT_EQ(A.termAt(k), kNoTerm) << "FileLogStore resurrected " << k;
+          ASSERT_EQ(B.termAt(k), kNoTerm) << "LsmLogStore resurrected " << k;
+        }
+        ASSERT_EQ(A.termAt(lii), A.lastIncludedTerm());
+        ASSERT_EQ(B.termAt(lii), B.lastIncludedTerm());
+        // nothing at or below the boundary may come back out of slice() either
+        for (const LogEntry& e : B.slice(1, 32, SIZE_MAX)) {
+          EXPECT_GT(e.index, lii) << "slice resurrected " << e.index;
+        }
+      }
+    }
+    EXPECT_EQ(mismatches, 0) << "cross-engine divergence under two compactions";
+
+    // (4) positive markers -- without these the interaction was never exercised.
+    const std::string frag = B.engineStatsFragment();
+    const uint64_t lsmRounds = counterFrom(frag, "lsm_compaction_rounds");
+    const uint64_t lsmFlushes = counterFrom(frag, "lsm_flush_done");
+    EXPECT_GT(lsmFlushes, 0u) << "no lsm memtable flush happened: " << frag;
+    EXPECT_GT(lsmRounds, 0u) << "lsm background compaction never ran: " << frag;
+    EXPECT_GT(compactCalls, 0) << "raft prefix compaction never ran";
+    EXPECT_GT(B.stats().compacts, 0u) << "raft prefix compaction never ran";
+    std::fprintf(stderr,
+                 "[two-compactions] lsm_flush_done=%llu lsm_compaction_rounds=%llu "
+                 "raft_compacts=%llu last_included=%llu first=%llu last=%llu\n",
+                 (unsigned long long)lsmFlushes, (unsigned long long)lsmRounds,
+                 (unsigned long long)B.stats().compacts,
+                 (unsigned long long)B.lastIncludedIndex(),
+                 (unsigned long long)B.firstIndex(), (unsigned long long)B.lastIndex());
+  }
+
+  // (3) reopen: the compacted prefix must stay gone (it must not be rebuilt from
+  // the WAL/SST), and the retained tail must be observationally identical.
+  //
+  // LsmLogStore::load() is explicit and scans from the CURRENT boundary, so a
+  // restart must first replay the durable snapshot boundary -- exactly what
+  // RaftNode does before load() (FileLogStore gets it from the compacted file).
+  // Without that call load() correctly REFUSES to start (an entry above the
+  // boundary with no predecessor means the compacted prefix is missing).
+  LsmLogStore B2(db);
+  B2.setBoundary(A.lastIncludedIndex(), A.lastIncludedTerm());
+  Term rt = kNoTerm;
+  int rv = -1;
+  Index rli = kNoIndex;
+  ASSERT_TRUE(B2.load(rt, rv, rli)) << "load() refused after a clean compact+sync";
+  EXPECT_EQ(rli, A.lastIndex());
+  EXPECT_EQ(dump(A), dump(B2)) << "reopen diverged after two compactions";
+  EXPECT_EQ(B2.termAt(1), kNoTerm) << "compacted prefix resurrected after reopen";
+  EXPECT_EQ(B2.lastIncludedIndex(), A.lastIncludedIndex());
+  EXPECT_EQ(B2.firstIndex(), A.firstIndex());
   std::filesystem::remove_all(da);
   std::filesystem::remove_all(db);
 }

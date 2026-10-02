@@ -1111,3 +1111,38 @@ TSan 159 = 163 − 4：`LsmCrash.*` 的 2 个与 `LsmApplyReopen.*` 的 2 个 fo
 - 归因（诊断副本，打印 `FAIL_AT_LINE` 与 `PUT115 rc/out`）：失败轮命中 `PUT115 rc=1 out=[NOT_LEADER]` —— 仓库脚本第 115 行 `put hello world` 在领导权切换窗口内耗尽 CLI 重定向预算（3 次 / 1s）而返回 `NOT_LEADER`；`set -euo pipefail` 下 `out=$(...)` 直接中止，`expect` 从未执行 ⇒ 该轮日志只剩 4 行、没有 PASS 标记。
 - 该 flake **不是 M6.10 引入**：三臂对照（§M6.9-2）M6.9 之前原版 8.3% / 本仓 lsm/lsm 8.3% / 本仓 file/mem 16.7%。
 - `raft_fault` / `raft_snapshot_fault` / `raft_membership_fault` 在两轮验收里（首轮与复验各 10 轮）**全绿**，未见 flake。
+
+## M6.10.5 加固（2）两套 compact 交互：raft 前缀压缩 × lsm 后台 compaction
+
+**缺口**：常规门禁（n≤4000）里 `lsm_compaction_rounds=0` —— 这条交互从未被压到。
+
+**做法**：把 lsm 的 memtable 调到 64 KiB（`RAFTKV_LSM_WRITE_BUFFER_BYTES`，M6.10.4 N1 引入的诊断旋钮），
+于是每次 flush 产出小 L0 文件的速度远快于后台 compaction 的消化速度，**默认** L0 触发阈值（4）就会真的触发；
+同时 raft 侧按 `--snapshot-threshold 1000` 周期快照并 `log_.compact()` 做前缀压缩。
+
+**判据与原始输出**（`docs/raw/m6.10.5-two-compactions.log`）：
+
+1. **跨引擎逐项等价**：store 级用例 `RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction` 在
+   25 轮「追加 400 条 → `compact(lastIndex-200)`」的**同一操作序列**下，逐轮比较
+   `lastIndex / lastTerm / firstIndex / lastIncludedIndex / lastIncludedTerm / termAt(0..12) / slice(5 种 clamp)`，
+   `mismatches == 0`；重开后（先 `setBoundary` 回放快照边界、再 `load()`）两边仍逐字节相同。
+2. **`missing 0` 全程成立**：集群驱动 6 轮，每轮 `verify 20000` 都是 `missing 0`；
+   **kill -9 全部节点 → 重启 → 仍 `missing 0`**。
+3. **被压缩的区间不复活**：每次 compact 后，`[1, lastIncluded)` 的 `termAt` 在两个引擎都返回 `kNoTerm`，
+   `slice(1, 32)` 不返回任何 `index <= lastIncluded` 的条目；重开后同样不复活。
+   （边界条目 `lastIncluded` 本身按设计保留 `lastIncludedTerm` —— 那是 AppendEntries 一致性检查需要的，
+   不属于“被压缩掉的数据”。）
+4. **正向标记（没有这个标记就等于没测到）**：
+   - 引擎自报 `lsm_compaction_rounds` 21 → **140**、`lsm_flush_done` 81 → 501（**后台 compaction 真跑了**）；
+   - raft 侧 `snapshot_index` 19465 → **119834**、`stats().compacts = 24`（**前缀压缩真跑了**）。
+
+   两者都是**每会话**计数：重启后的新进程自然从 0 开始，因此正向标记取**重启前各轮的最大值**
+   （脚本里的 `lsm_compaction_rounds_max` / `snapshot_index_max`），重启后只判 `missing 0` 与 `snapshot_index`。
+   第一版脚本正是把这两个计数读在重启之后而误报 `POSITIVE_MARKER_MISSING`——已修正并留有原始输出对照。
+
+**排错记录（避免下一次误判）**：调查中还确认了 `LsmLogStore::load()` 是**显式**的，且从**当前边界**开始扫；
+重开时必须先 `setBoundary(snapshotIndex, snapshotTerm)`（`RaftNode` 正是这么做的），否则 `load()` 会按设计
+**拒绝启动**（“边界之上有记录却没有前驱 ⇒ 被压缩掉的前缀不见了”），而不是静默截断。这不是缺陷。
+
+**复跑**：`scripts/raft_two_compactions.sh --rounds 6`（默认 64 KiB memtable，`--write-buffer-bytes` 可调）；
+store 级用例 `--gtest_filter=RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction`。
