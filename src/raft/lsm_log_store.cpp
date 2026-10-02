@@ -597,7 +597,9 @@ void LsmLogStore::setBoundary(Index lastIncludedIndex, Term lastIncludedTerm) {
   // 会把 lastIndex_ 停在旧值，termAt()/slice() 进而对空的 terms_ 越界索引（评审复现）。
   if (terms_.empty()) {
     lastIndex_ = lastIncluded_;
-    lastTerm_ = lastIncludedTerm_;
+    // FileLogStore::lastTerm() returns kNoTerm when lastIncluded_ == kNoIndex
+    // (even if a lastIncludedTerm was supplied) -- match it exactly.
+    lastTerm_ = (lastIncluded_ == kNoIndex) ? kNoTerm : lastIncludedTerm_;
   } else {
     // 保留后缀 terms_[j] 的绝对索引 = oldFirst + drop + j（drop = 本次删掉的前缀条数）
     lastIndex_ = oldFirst + drop + static_cast<Index>(terms_.size()) - 1;
