@@ -1,0 +1,80 @@
+[  3%] Building CXX object CMakeFiles/raftkv_core.dir/src/store.cpp.o
+[  3%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/sstable/format.cpp.o
+[  3%] Building CXX object CMakeFiles/raftkv_core.dir/src/codec.cpp.o
+[  3%] Building CXX object CMakeFiles/raftkv_core.dir/src/wal.cpp.o
+[  5%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/sstable/block.cpp.o
+[  7%] Building CXX object CMakeFiles/raftkv_core.dir/src/server.cpp.o
+[  9%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/sstable/table_builder.cpp.o
+[ 11%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/sstable/table.cpp.o
+[ 11%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/bloom.cpp.o
+[ 13%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/util/status.cpp.o
+[ 15%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/util/coding.cpp.o
+[ 16%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/util/crc32c.cpp.o
+[ 16%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/util/arena.cpp.o
+[ 18%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/util/env_posix.cpp.o
+[ 20%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/memtable.cpp.o
+[ 22%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/db.cpp.o
+[ 22%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/write_batch.cpp.o
+[ 24%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/wal.cpp.o
+[ 26%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/filename.cpp.o
+[ 26%] Linking CXX static library libraftkv_core.a
+[ 26%] Built target raftkv_core
+[ 28%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/db_impl.cpp.o
+[ 28%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/version_edit.cpp.o
+[ 30%] Building CXX object CMakeFiles/raftkv_server.dir/src/main_server.cpp.o
+[ 32%] Building CXX object CMakeFiles/raftkv_cli.dir/src/main_client.cpp.o
+[ 33%] Building CXX object CMakeFiles/raftkv_tests.dir/tests/test_main.cpp.o
+[ 35%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/version_set.cpp.o
+[ 37%] Linking CXX executable bin/raftkv_server
+[ 37%] Building CXX object CMakeFiles/raftkv_tests.dir/tests/test_store.cpp.o
+[ 39%] Building CXX object CMakeFiles/raftkv_tests.dir/tests/test_codec.cpp.o
+[ 39%] Built target raftkv_server
+[ 41%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/compaction.cpp.o
+[ 43%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/merging_iterator.cpp.o
+[ 43%] Building CXX object lsm-build/CMakeFiles/lsm.dir/src/db_iter.cpp.o
+[ 45%] Linking CXX executable bin/raftkv_cli
+[ 45%] Built target raftkv_cli
+[ 47%] Linking CXX executable bin/raftkv_tests
+[ 47%] Built target raftkv_tests
+[ 49%] Linking CXX static library liblsm.a
+[ 49%] Built target lsm
+[ 50%] Building CXX object CMakeFiles/raftkv_raft.dir/src/raft/memory_adapters.cpp.o
+[ 50%] Building CXX object CMakeFiles/raftkv_raft.dir/src/raft/file_log_store.cpp.o
+[ 52%] Building CXX object CMakeFiles/raftkv_raft.dir/src/raft/cluster_config.cpp.o
+[ 54%] Building CXX object CMakeFiles/raftkv_raft.dir/src/raft/message.cpp.o
+[ 58%] Building CXX object CMakeFiles/raftkv_raft.dir/src/raft/lsm_log_store.cpp.o
+[ 58%] Building CXX object CMakeFiles/raftkv_raft.dir/src/raft/raft_node.cpp.o
+[ 58%] Building CXX object CMakeFiles/raftkv_raft.dir/src/raft/reactor.cpp.o
+[ 60%] Building CXX object CMakeFiles/raftkv_raft.dir/src/raft/metrics.cpp.o
+[ 62%] Building CXX object CMakeFiles/raftkv_raft.dir/src/raft/transport_reactor.cpp.o
+[ 64%] Building CXX object CMakeFiles/raftkv_raft.dir/src/raft/transport_tcp.cpp.o
+[ 66%] Building CXX object CMakeFiles/raftkv_raft.dir/src/raft/memory_snapshot_store.cpp.o
+[ 66%] Building CXX object CMakeFiles/raftkv_raft.dir/src/raft/file_snapshot_store.cpp.o
+[ 67%] Building CXX object CMakeFiles/raftkv_raft.dir/src/kv/kv_state_machine.cpp.o
+[ 69%] Building CXX object CMakeFiles/raftkv_raft.dir/src/kv/lsm_kv_state_machine.cpp.o
+[ 71%] Linking CXX static library libraftkv_raft.a
+[ 71%] Built target raftkv_raft
+[ 73%] Building CXX object CMakeFiles/raftkv_raft_node.dir/src/main_raft_node.cpp.o
+[ 73%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_gtest_main.cpp.o
+[ 73%] Building CXX object CMakeFiles/raftkv_raft_cli.dir/src/main_raft_client.cpp.o
+[ 75%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_election_test.cpp.o
+[ 79%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_log_test.cpp.o
+[ 79%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_sm_contract_test.cpp.o
+[ 81%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_commit_test.cpp.o
+[ 81%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_idempotent_test.cpp.o
+[ 83%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_lsm_state_machine_test.cpp.o
+[ 84%] Linking CXX executable bin/raftkv_raft_cli
+[ 84%] Built target raftkv_raft_cli
+[ 86%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_lsm_restore_test.cpp.o
+[ 86%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_lsm_apply_reopen_test.cpp.o
+[ 88%] Linking CXX executable bin/raftkv_raft_node
+[ 90%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_restart_test.cpp.o
+[ 90%] Built target raftkv_raft_node
+[ 92%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_snapshot_test.cpp.o
+[ 94%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_membership_test.cpp.o
+[ 94%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_perf_test.cpp.o
+[ 96%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_reactor_test.cpp.o
+[ 98%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_lsm_log_test.cpp.o
+[100%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_log_store_diff_test.cpp.o
+[100%] Linking CXX executable bin/raftkv_raft_tests
+[100%] Built target raftkv_raft_tests

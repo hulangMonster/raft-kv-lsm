@@ -1,0 +1,14 @@
+PASS store_put_get
+PASS store_overwrite_and_del
+PASS store_binary_value
+PASS store_replay_after_reopen
+PASS store_truncates_torn_tail
+PASS codec_put_roundtrip
+PASS codec_get_del_roundtrip
+PASS codec_long_key_value
+PASS codec_empty_value
+PASS codec_rejects_truncated_frame
+PASS codec_rejects_bad_op_and_version
+PASS codec_response_roundtrip
+PASS codec_rejects_key_too_long
+all tests passed (13)

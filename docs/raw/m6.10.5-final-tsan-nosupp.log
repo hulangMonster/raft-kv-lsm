@@ -1,0 +1,1091 @@
+[==========] Running 161 tests from 24 test suites.
+[----------] Global test environment set-up.
+[----------] 5 tests from RaftElection
+[ RUN      ] RaftElection.SingleNodeBecomesLeader
+[       OK ] RaftElection.SingleNodeBecomesLeader (1 ms)
+[ RUN      ] RaftElection.OnlyOneLeaderPerTerm
+[       OK ] RaftElection.OnlyOneLeaderPerTerm (17 ms)
+[ RUN      ] RaftElection.SplitVoteResolvedByNextTimeout
+[       OK ] RaftElection.SplitVoteResolvedByNextTimeout (8 ms)
+[ RUN      ] RaftElection.VoteGrantedToUpToDateCandidate
+[       OK ] RaftElection.VoteGrantedToUpToDateCandidate (0 ms)
+[ RUN      ] RaftElection.TermAndVotePersistedBeforeReply
+[       OK ] RaftElection.TermAndVotePersistedBeforeReply (0 ms)
+[----------] 5 tests from RaftElection (29 ms total)
+
+[----------] 3 tests from RaftLog
+[ RUN      ] RaftLog.ReplicationAllLogsMatch
+[       OK ] RaftLog.ReplicationAllLogsMatch (18 ms)
+[ RUN      ] RaftLog.ConflictingSuffixTruncatedOnLeaderChange
+[       OK ] RaftLog.ConflictingSuffixTruncatedOnLeaderChange (12 ms)
+[ RUN      ] RaftLog.LaggingFollowerCatchesUp
+[       OK ] RaftLog.LaggingFollowerCatchesUp (18 ms)
+[----------] 3 tests from RaftLog (49 ms total)
+
+[----------] 2 tests from RaftCommit
+[ RUN      ] RaftCommit.CommitRequiresMajority
+[       OK ] RaftCommit.CommitRequiresMajority (1018 ms)
+[ RUN      ] RaftCommit.OldTermEntryNotCommittedByCount
+[       OK ] RaftCommit.OldTermEntryNotCommittedByCount (65 ms)
+[----------] 2 tests from RaftCommit (1084 ms total)
+
+[----------] 1 test from ProposeStepDown
+[ RUN      ] ProposeStepDown.ReturnsNotLeaderAfterStepDown
+[       OK ] ProposeStepDown.ReturnsNotLeaderAfterStepDown (4 ms)
+[----------] 1 test from ProposeStepDown (4 ms total)
+
+[----------] 1 test from KvIdempotent
+[ RUN      ] KvIdempotent.ApplyIsIdempotentOnRetry
+[       OK ] KvIdempotent.ApplyIsIdempotentOnRetry (0 ms)
+[----------] 1 test from KvIdempotent (0 ms total)
+
+[----------] 10 tests from KvStateMachineContract
+[ RUN      ] KvStateMachineContract.Empty
+[       OK ] KvStateMachineContract.Empty (0 ms)
+[ RUN      ] KvStateMachineContract.BasicOps
+[       OK ] KvStateMachineContract.BasicOps (0 ms)
+[ RUN      ] KvStateMachineContract.IdempotentSameIndex
+[       OK ] KvStateMachineContract.IdempotentSameIndex (0 ms)
+[ RUN      ] KvStateMachineContract.IdempotentHigherIndexKeepsData
+[       OK ] KvStateMachineContract.IdempotentHigherIndexKeepsData (0 ms)
+[ RUN      ] KvStateMachineContract.MarkersAdvanceApplied
+[       OK ] KvStateMachineContract.MarkersAdvanceApplied (0 ms)
+[ RUN      ] KvStateMachineContract.CanonicalState
+[       OK ] KvStateMachineContract.CanonicalState (0 ms)
+[ RUN      ] KvStateMachineContract.SnapshotDeterministic
+[       OK ] KvStateMachineContract.SnapshotDeterministic (0 ms)
+[ RUN      ] KvStateMachineContract.StreamMatchesSerialize
+[       OK ] KvStateMachineContract.StreamMatchesSerialize (0 ms)
+[ RUN      ] KvStateMachineContract.SnapshotRoundTrip
+[       OK ] KvStateMachineContract.SnapshotRoundTrip (0 ms)
+[ RUN      ] KvStateMachineContract.RestoreRejectsMalformed
+[       OK ] KvStateMachineContract.RestoreRejectsMalformed (0 ms)
+[----------] 10 tests from KvStateMachineContract (2 ms total)
+
+[----------] 13 tests from LsmContract
+[ RUN      ] LsmContract.Empty
+[       OK ] LsmContract.Empty (12 ms)
+[ RUN      ] LsmContract.BasicOps
+[       OK ] LsmContract.BasicOps (14 ms)
+[ RUN      ] LsmContract.IdempotentSameIndex
+[       OK ] LsmContract.IdempotentSameIndex (18 ms)
+[ RUN      ] LsmContract.IdempotentHigherIndexKeepsData
+[       OK ] LsmContract.IdempotentHigherIndexKeepsData (22 ms)
+[ RUN      ] LsmContract.MarkersAdvanceApplied
+[       OK ] LsmContract.MarkersAdvanceApplied (15 ms)
+[ RUN      ] LsmContract.CanonicalState
+[       OK ] LsmContract.CanonicalState (9 ms)
+[ RUN      ] LsmContract.SnapshotDeterministic
+[       OK ] LsmContract.SnapshotDeterministic (33 ms)
+[ RUN      ] LsmContract.StreamMatchesSerialize
+[       OK ] LsmContract.StreamMatchesSerialize (20 ms)
+[ RUN      ] LsmContract.SnapshotRoundTrip
+[       OK ] LsmContract.SnapshotRoundTrip (50 ms)
+[ RUN      ] LsmContract.RestoreRejectsMalformed
+[       OK ] LsmContract.RestoreRejectsMalformed (24 ms)
+[ RUN      ] LsmContract.CrossRestoreMemToLsm
+[       OK ] LsmContract.CrossRestoreMemToLsm (12 ms)
+[ RUN      ] LsmContract.CrossRestoreLsmToMem
+[       OK ] LsmContract.CrossRestoreLsmToMem (14 ms)
+[ RUN      ] LsmContract.SnapshotBytesIdenticalToMem
+[       OK ] LsmContract.SnapshotBytesIdenticalToMem (13 ms)
+[----------] 13 tests from LsmContract (262 ms total)
+
+[----------] 2 tests from LsmCrash
+[ RUN      ] LsmCrash.TornWalTailRecoversConsistentPrefix
+[       OK ] LsmCrash.TornWalTailRecoversConsistentPrefix (159 ms)
+[ RUN      ] LsmCrash.RestoreAtomicSurvivesReopen
+[       OK ] LsmCrash.RestoreAtomicSurvivesReopen (27 ms)
+[----------] 2 tests from LsmCrash (187 ms total)
+
+[----------] 8 tests from LsmRestore
+[ RUN      ] LsmRestore.MultiEntryPayloadOver64MiBRestoresInManyBatches
+[       OK ] LsmRestore.MultiEntryPayloadOver64MiBRestoresInManyBatches (109405 ms)
+[ RUN      ] LsmRestore.SingleHugeValueRestoresAcrossChunks
+[       OK ] LsmRestore.SingleHugeValueRestoresAcrossChunks (127383 ms)
+[ RUN      ] LsmRestore.Exactly64MiBPayloadRestores
+[       OK ] LsmRestore.Exactly64MiBPayloadRestores (75240 ms)
+[ RUN      ] LsmRestore.OverOneChunkBelow64MiBRestores
+[       OK ] LsmRestore.OverOneChunkBelow64MiBRestores (8271 ms)
+[ RUN      ] LsmRestore.RepeatedRestoreIsIdempotent
+[       OK ] LsmRestore.RepeatedRestoreIsIdempotent (23408 ms)
+[ RUN      ] LsmRestore.ApplyLargeValueChunksInProcess
+[       OK ] LsmRestore.ApplyLargeValueChunksInProcess (3856 ms)
+[ RUN      ] LsmRestore.ThrowingRestoreHookKeepsOldState
+[       OK ] LsmRestore.ThrowingRestoreHookKeepsOldState (9567 ms)
+[ RUN      ] LsmRestore.RestoredDedupTableStaysConsistentWithData
+[       OK ] LsmRestore.RestoredDedupTableStaysConsistentWithData (43677 ms)
+[----------] 8 tests from LsmRestore (400812 ms total)
+
+[----------] 1 test from LsmApplyReopen
+[ RUN      ] LsmApplyReopen.LargeApplySurvivesReopen
+[       OK ] LsmApplyReopen.LargeApplySurvivesReopen (9809 ms)
+[----------] 1 test from LsmApplyReopen (9809 ms total)
+
+[----------] 2 tests from FileLogStore
+[ RUN      ] FileLogStore.RestartRestoresMetaAndLog
+[       OK ] FileLogStore.RestartRestoresMetaAndLog (8 ms)
+[ RUN      ] FileLogStore.TruncatesTornTail
+[       OK ] FileLogStore.TruncatesTornTail (2 ms)
+[----------] 2 tests from FileLogStore (11 ms total)
+
+[----------] 21 tests from LsmLogStore
+[ RUN      ] LsmLogStore.KeyEncodingIsBytewiseIndexOrdered
+[       OK ] LsmLogStore.KeyEncodingIsBytewiseIndexOrdered (0 ms)
+[ RUN      ] LsmLogStore.MetaKeyIsOutsideLogRange
+[       OK ] LsmLogStore.MetaKeyIsOutsideLogRange (0 ms)
+[ RUN      ] LsmLogStore.AppendIsDurableAndVisible
+[       OK ] LsmLogStore.AppendIsDurableAndVisible (18 ms)
+[ RUN      ] LsmLogStore.AppendNoSyncIsVisibleButSurvivesSync
+[       OK ] LsmLogStore.AppendNoSyncIsVisibleButSurvivesSync (10 ms)
+[ RUN      ] LsmLogStore.IdempotentAppendSameIndexSameTerm
+[       OK ] LsmLogStore.IdempotentAppendSameIndexSameTerm (8 ms)
+[ RUN      ] LsmLogStore.ConflictTruncateThenAppend
+[       OK ] LsmLogStore.ConflictTruncateThenAppend (14 ms)
+[ RUN      ] LsmLogStore.TruncateSuffixBoundaries
+[       OK ] LsmLogStore.TruncateSuffixBoundaries (14 ms)
+[ RUN      ] LsmLogStore.TruncateNoSyncThenSyncIsDurable
+[       OK ] LsmLogStore.TruncateNoSyncThenSyncIsDurable (27 ms)
+[ RUN      ] LsmLogStore.TruncateNoSyncIntoKillDashNineKeepsDeletionInPageCache
+[       OK ] LsmLogStore.TruncateNoSyncIntoKillDashNineKeepsDeletionInPageCache (40 ms)
+[ RUN      ] LsmLogStore.SliceClampsAndHonoursLimits
+[       OK ] LsmLogStore.SliceClampsAndHonoursLimits (10 ms)
+[ RUN      ] LsmLogStore.CompactDropsPrefixAndSurvivesRestart
+[       OK ] LsmLogStore.CompactDropsPrefixAndSurvivesRestart (13 ms)
+[ RUN      ] LsmLogStore.PrefixGoneWithoutSnapshotRefusesLoad
+[       OK ] LsmLogStore.PrefixGoneWithoutSnapshotRefusesLoad (24 ms)
+[ RUN      ] LsmLogStore.LoadSkipsEntriesBelowBoundary
+[       OK ] LsmLogStore.LoadSkipsEntriesBelowBoundary (24 ms)
+[ RUN      ] LsmLogStore.EmptyLogWithBoundary
+[       OK ] LsmLogStore.EmptyLogWithBoundary (12 ms)
+[ RUN      ] LsmLogStore.MetaPersistIsAtomicAndDurable
+[       OK ] LsmLogStore.MetaPersistIsAtomicAndDurable (13 ms)
+[ RUN      ] LsmLogStore.SecondProcessOnSameDirIsRejectedByLock
+[       OK ] LsmLogStore.SecondProcessOnSameDirIsRejectedByLock (32 ms)
+[ RUN      ] LsmLogStore.LoadRefusesGapInTheMiddle
+[       OK ] LsmLogStore.LoadRefusesGapInTheMiddle (28 ms)
+[ RUN      ] LsmLogStore.ValueBytesMatchFileLogStoreOnDisk
+[       OK ] LsmLogStore.ValueBytesMatchFileLogStoreOnDisk (34 ms)
+[ RUN      ] LsmLogStore.ConcurrentAppendSyncAndReadersStayConsistent
+[       OK ] LsmLogStore.ConcurrentAppendSyncAndReadersStayConsistent (3112 ms)
+[ RUN      ] LsmLogStore.RestartRestoresMetaAndLog
+[       OK ] LsmLogStore.RestartRestoresMetaAndLog (21 ms)
+[ RUN      ] LsmLogStore.TruncatesTornTail
+[       OK ] LsmLogStore.TruncatesTornTail (22 ms)
+[----------] 21 tests from LsmLogStore (3488 ms total)
+
+[----------] 13 tests from RaftSnapshot
+[ RUN      ] RaftSnapshot.SnapshotCreatedAtThreshold
+[       OK ] RaftSnapshot.SnapshotCreatedAtThreshold (17 ms)
+[ RUN      ] RaftSnapshot.SnapshotOnlyCoversAppliedPrefix
+[       OK ] RaftSnapshot.SnapshotOnlyCoversAppliedPrefix (15 ms)
+[ RUN      ] RaftSnapshot.CompactTruncatesLogAndFirstIndex
+[       OK ] RaftSnapshot.CompactTruncatesLogAndFirstIndex (14 ms)
+[ RUN      ] RaftSnapshot.TermAtCompactedBoundarySemantics
+[       OK ] RaftSnapshot.TermAtCompactedBoundarySemantics (15 ms)
+[ RUN      ] RaftSnapshot.InstallSnapshotCatchesUpLaggingFollower
+[       OK ] RaftSnapshot.InstallSnapshotCatchesUpLaggingFollower (17 ms)
+[ RUN      ] RaftSnapshot.FollowerKeepsSuffixBeyondSnapshot
+[       OK ] RaftSnapshot.FollowerKeepsSuffixBeyondSnapshot (20 ms)
+[ RUN      ] RaftSnapshot.StaleSnapshotIgnored
+[       OK ] RaftSnapshot.StaleSnapshotIgnored (16 ms)
+[ RUN      ] RaftSnapshot.Sync542StillHoldsAcrossCompaction
+[       OK ] RaftSnapshot.Sync542StillHoldsAcrossCompaction (15 ms)
+[ RUN      ] RaftSnapshot.ProposeNotLeaderUnaffectedBySnapshot
+[       OK ] RaftSnapshot.ProposeNotLeaderUnaffectedBySnapshot (14 ms)
+[ RUN      ] RaftSnapshot.DedupTableSurvivesSnapshot
+[       OK ] RaftSnapshot.DedupTableSurvivesSnapshot (0 ms)
+[ RUN      ] RaftSnapshot.SingleNodeProposeCommitsWithoutPeers
+[       OK ] RaftSnapshot.SingleNodeProposeCommitsWithoutPeers (0 ms)
+[ RUN      ] RaftSnapshot.InstallSnapshotRetransmitAfterLostReplies
+[       OK ] RaftSnapshot.InstallSnapshotRetransmitAfterLostReplies (34 ms)
+[ RUN      ] RaftSnapshot.InstalledNodeCanServeSnapshotAsLeader
+[       OK ] RaftSnapshot.InstalledNodeCanServeSnapshotAsLeader (63 ms)
+[----------] 13 tests from RaftSnapshot (246 ms total)
+
+[----------] 7 tests from RaftSnapshotDisk
+[ RUN      ] RaftSnapshotDisk.RestartLoadsSnapshotThenReplaysTail
+[       OK ] RaftSnapshotDisk.RestartLoadsSnapshotThenReplaysTail (19 ms)
+[ RUN      ] RaftSnapshotDisk.TornSnapshotDiscarded
+[       OK ] RaftSnapshotDisk.TornSnapshotDiscarded (9 ms)
+[ RUN      ] RaftSnapshotDisk.TornTailAfterCompact
+[       OK ] RaftSnapshotDisk.TornTailAfterCompact (7 ms)
+[ RUN      ] RaftSnapshotDisk.SnapshotAndLogCombinedRecovery
+[       OK ] RaftSnapshotDisk.SnapshotAndLogCombinedRecovery (13 ms)
+[ RUN      ] RaftSnapshotDisk.FileStoreClusterKeepsCommittingAfterCompaction
+[       OK ] RaftSnapshotDisk.FileStoreClusterKeepsCommittingAfterCompaction (470 ms)
+[ RUN      ] RaftSnapshotDisk.LsmStoreClusterKeepsCommittingAfterCompaction
+[       OK ] RaftSnapshotDisk.LsmStoreClusterKeepsCommittingAfterCompaction (822 ms)
+[ RUN      ] RaftSnapshotDisk.ConcurrentSaveAndInstallKeepNewestSnapshot
+[       OK ] RaftSnapshotDisk.ConcurrentSaveAndInstallKeepNewestSnapshot (519 ms)
+[----------] 7 tests from RaftSnapshotDisk (1864 ms total)
+
+[----------] 3 tests from RaftSnapshotDiskLsm
+[ RUN      ] RaftSnapshotDiskLsm.RestartLoadsSnapshotThenReplaysTail
+[       OK ] RaftSnapshotDiskLsm.RestartLoadsSnapshotThenReplaysTail (37 ms)
+[ RUN      ] RaftSnapshotDiskLsm.TornTailAfterCompact
+[       OK ] RaftSnapshotDiskLsm.TornTailAfterCompact (36 ms)
+[ RUN      ] RaftSnapshotDiskLsm.SnapshotAndLogCombinedRecovery
+[       OK ] RaftSnapshotDiskLsm.SnapshotAndLogCombinedRecovery (47 ms)
+[----------] 3 tests from RaftSnapshotDiskLsm (121 ms total)
+
+[----------] 3 tests from RaftSnapshotStream
+[ RUN      ] RaftSnapshotStream.ChunkedStreamMatchesSerializeByteForByte
+[       OK ] RaftSnapshotStream.ChunkedStreamMatchesSerializeByteForByte (406 ms)
+[ RUN      ] RaftSnapshotStream.SaveStreamingWritesIdenticalFile
+[       OK ] RaftSnapshotStream.SaveStreamingWritesIdenticalFile (470 ms)
+[ RUN      ] RaftSnapshotStream.ReadInstalledSlicesMatchFileContent
+[       OK ] RaftSnapshotStream.ReadInstalledSlicesMatchFileContent (81 ms)
+[----------] 3 tests from RaftSnapshotStream (958 ms total)
+
+[----------] 1 test from RaftSnapshotResume
+[ RUN      ] RaftSnapshotResume.ContinuesAfterStoreRestart
+[       OK ] RaftSnapshotResume.ContinuesAfterStoreRestart (138 ms)
+[----------] 1 test from RaftSnapshotResume (138 ms total)
+
+[----------] 2 tests from RaftSnapshotStore
+[ RUN      ] RaftSnapshotStore.StaleSaveNeverOverwritesNewerInstall
+[       OK ] RaftSnapshotStore.StaleSaveNeverOverwritesNewerInstall (0 ms)
+[ RUN      ] RaftSnapshotStore.ReceiveChunkIsIdempotentForRetransmits
+[       OK ] RaftSnapshotStore.ReceiveChunkIsIdempotentForRetransmits (0 ms)
+[----------] 2 tests from RaftSnapshotStore (0 ms total)
+
+[----------] 29 tests from RaftMembership
+[ RUN      ] RaftMembership.A1_ConfigSerdeRoundTrip
+[       OK ] RaftMembership.A1_ConfigSerdeRoundTrip (0 ms)
+[ RUN      ] RaftMembership.A2_AddReplicatesConfigToAllNodes
+[       OK ] RaftMembership.A2_AddReplicatesConfigToAllNodes (9 ms)
+[ RUN      ] RaftMembership.A3_SeedBecomesInitialConfig
+[       OK ] RaftMembership.A3_SeedBecomesInitialConfig (0 ms)
+[ RUN      ] RaftMembership.A4_UnreachableNewNodeIsNotAddedAndDoesNotCount
+[       OK ] RaftMembership.A4_UnreachableNewNodeIsNotAddedAndDoesNotCount (30003 ms)
+[ RUN      ] RaftMembership.A5_AddCommitsAndTakesEffect
+[       OK ] RaftMembership.A5_AddCommitsAndTakesEffect (9 ms)
+[ RUN      ] RaftMembership.A6_RemoveTakesEffectAndStopsCounting
+[       OK ] RaftMembership.A6_RemoveTakesEffectAndStopsCounting (4 ms)
+[ RUN      ] RaftMembership.A7_SecondChangeRejectedWhileOneInFlight
+[       OK ] RaftMembership.A7_SecondChangeRejectedWhileOneInFlight (306 ms)
+[ RUN      ] RaftMembership.A8_ConfigCommitNeedsBothMajorities
+[       OK ] RaftMembership.A8_ConfigCommitNeedsBothMajorities (309 ms)
+[ RUN      ] RaftMembership.A9_RemovedNodeCannotWinElection
+[       OK ] RaftMembership.A9_RemovedNodeCannotWinElection (7 ms)
+[ RUN      ] RaftMembership.A10_RemovedNodeRetiresAndRedirects
+[       OK ] RaftMembership.A10_RemovedNodeRetiresAndRedirects (5 ms)
+[ RUN      ] RaftMembership.A11_StartupRejectsNonMonotonicConfigVersions
+[       OK ] RaftMembership.A11_StartupRejectsNonMonotonicConfigVersions (0 ms)
+[ RUN      ] RaftMembership.A12_SnapshotCarriesConfigAndRestartKeepsTopology
+[       OK ] RaftMembership.A12_SnapshotCarriesConfigAndRestartKeepsTopology (16 ms)
+[ RUN      ] RaftMembership.A13_ReadIsNotServedByStaleLeader
+[       OK ] RaftMembership.A13_ReadIsNotServedByStaleLeader (1 ms)
+[ RUN      ] RaftMembership.A14_ReadIndexRequiresQuorum
+[       OK ] RaftMembership.A14_ReadIndexRequiresQuorum (203 ms)
+[ RUN      ] RaftMembership.A15_SupraRuleHoldsAfterMembershipChange
+[       OK ] RaftMembership.A15_SupraRuleHoldsAfterMembershipChange (62 ms)
+[ RUN      ] RaftMembership.A16_LeaderSelfRemovalStepsDownAfterCommit
+[       OK ] RaftMembership.A16_LeaderSelfRemovalStepsDownAfterCommit (4 ms)
+[ RUN      ] RaftMembership.A17_ConfigMessageCodec
+[       OK ] RaftMembership.A17_ConfigMessageCodec (0 ms)
+[ RUN      ] RaftMembership.A18_InstalledSnapshotCarriesConfig
+[       OK ] RaftMembership.A18_InstalledSnapshotCarriesConfig (45 ms)
+[ RUN      ] RaftMembership.A19_ConfigEntryTruncationRollsBackConfig
+[       OK ] RaftMembership.A19_ConfigEntryTruncationRollsBackConfig (307 ms)
+[ RUN      ] RaftMembership.A20_J2IsNotBypassedByLaterEntry
+[       OK ] RaftMembership.A20_J2IsNotBypassedByLaterEntry (631 ms)
+[ RUN      ] RaftMembership.A21_NewLeaderWithStaleCommitIndexMustNotServeStaleRead
+[       OK ] RaftMembership.A21_NewLeaderWithStaleCommitIndexMustNotServeStaleRead (310 ms)
+[ RUN      ] RaftMembership.A22_CodecRejectsMaliciousInput
+[       OK ] RaftMembership.A22_CodecRejectsMaliciousInput (14 ms)
+[ RUN      ] RaftMembership.A23_OnlyVotingMembersGetVotesAndRetiredNodesDoNotVote
+[       OK ] RaftMembership.A23_OnlyVotingMembersGetVotesAndRetiredNodesDoNotVote (6 ms)
+[ RUN      ] RaftMembership.A24_SnapshotNeverCarriesInFlightConfig
+[       OK ] RaftMembership.A24_SnapshotNeverCarriesInFlightConfig (305 ms)
+[ RUN      ] RaftMembership.A25_RestartKeepsConfigChangeInFlight
+[       OK ] RaftMembership.A25_RestartKeepsConfigChangeInFlight (305 ms)
+[ RUN      ] RaftMembership.A26_InstalledSnapshotReseatsConfigBaseline
+[       OK ] RaftMembership.A26_InstalledSnapshotReseatsConfigBaseline (0 ms)
+[ RUN      ] RaftMembership.A27_ConcurrentMembershipChangesAreSerialized
+[       OK ] RaftMembership.A27_ConcurrentMembershipChangesAreSerialized (354 ms)
+[ RUN      ] RaftMembership.A28_RemovedPeerIsReclaimedAfterCommit
+[       OK ] RaftMembership.A28_RemovedPeerIsReclaimedAfterCommit (11 ms)
+[ RUN      ] RaftMembership.A29_RemovedPeerKeepsReceivingUntilItAcks
+[       OK ] RaftMembership.A29_RemovedPeerKeepsReceivingUntilItAcks (9 ms)
+[----------] 29 tests from RaftMembership (33251 ms total)
+
+[----------] 4 tests from RaftMembershipDisk
+[ RUN      ] RaftMembershipDisk.B1_ConfigPersistsAcrossRestart
+[       OK ] RaftMembershipDisk.B1_ConfigPersistsAcrossRestart (70 ms)
+[ RUN      ] RaftMembershipDisk.B2_ConfigCompactedThenRecoveredFromSnapshot
+[       OK ] RaftMembershipDisk.B2_ConfigCompactedThenRecoveredFromSnapshot (361 ms)
+[ RUN      ] RaftMembershipDisk.B3_CrashDuringConfigChangeKeepsConsistentTopology
+[       OK ] RaftMembershipDisk.B3_CrashDuringConfigChangeKeepsConsistentTopology (364 ms)
+[ RUN      ] RaftMembershipDisk.B4_Rks1V1SnapshotStillLoads
+[       OK ] RaftMembershipDisk.B4_Rks1V1SnapshotStillLoads (1 ms)
+[----------] 4 tests from RaftMembershipDisk (799 ms total)
+
+[----------] 3 tests from RaftMembershipDiskLsm
+[ RUN      ] RaftMembershipDiskLsm.B1_ConfigPersistsAcrossRestart
+[       OK ] RaftMembershipDiskLsm.B1_ConfigPersistsAcrossRestart (128 ms)
+[ RUN      ] RaftMembershipDiskLsm.B2_ConfigCompactedThenRecoveredFromSnapshot
+[       OK ] RaftMembershipDiskLsm.B2_ConfigCompactedThenRecoveredFromSnapshot (428 ms)
+[ RUN      ] RaftMembershipDiskLsm.B3_CrashDuringConfigChangeKeepsConsistentTopology
+[       OK ] RaftMembershipDiskLsm.B3_CrashDuringConfigChangeKeepsConsistentTopology (385 ms)
+[----------] 3 tests from RaftMembershipDiskLsm (942 ms total)
+
+[----------] 17 tests from RaftPerf
+[ RUN      ] RaftPerf.A1_LockHeldDurableCallsAndSendsAreZero
+[       OK ] RaftPerf.A1_LockHeldDurableCallsAndSendsAreZero (10 ms)
+[ RUN      ] RaftPerf.A2_LockIsFreeWhileFsyncInProgress
+[       OK ] RaftPerf.A2_LockIsFreeWhileFsyncInProgress (11 ms)
+[ RUN      ] RaftPerf.A3_MetaPersistOutsideLockThenGrant
+[       OK ] RaftPerf.A3_MetaPersistOutsideLockThenGrant (9 ms)
+[ RUN      ] RaftPerf.A4_FailedSyncDoesNotAckOrAdvance
+[       OK ] RaftPerf.A4_FailedSyncDoesNotAckOrAdvance (0 ms)
+[ RUN      ] RaftPerf.A5_NoopUnblocksReadBarrier
+[       OK ] RaftPerf.A5_NoopUnblocksReadBarrier (1 ms)
+[ RUN      ] RaftPerf.A6_MetricsCountersAndStatusFragment
+[       OK ] RaftPerf.A6_MetricsCountersAndStatusFragment (0 ms)
+[ RUN      ] RaftPerf.M6105_LatencyUpperBoundAndMax
+[       OK ] RaftPerf.M6105_LatencyUpperBoundAndMax (0 ms)
+[ RUN      ] RaftPerf.A8_NonMemberVoteRequestCannotBumpTerm
+[       OK ] RaftPerf.A8_NonMemberVoteRequestCannotBumpTerm (1 ms)
+[ RUN      ] RaftPerf.A9_ConflictTruncationDoesNotFsyncUnderLock
+[       OK ] RaftPerf.A9_ConflictTruncationDoesNotFsyncUnderLock (0 ms)
+[ RUN      ] RaftPerf.A10_InFlightMuteWindowStaysBelowElectionTimeout
+[       OK ] RaftPerf.A10_InFlightMuteWindowStaysBelowElectionTimeout (0 ms)
+[ RUN      ] RaftPerf.A11_SlidingWindowOutOfOrderAcksAreIdempotent
+==================
+WARNING: ThreadSanitizer: double lock of a mutex (pid=335616)
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x184f8c)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x184f8c)
+    #3 std::unique_lock<std::mutex>::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x184f8c)
+    #4 std::unique_lock<std::mutex>::unique_lock(std::mutex&) /usr/include/c++/11/bits/unique_lock.h:69 (raftkv_raft_tests+0x184f8c)
+    #5 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:331 (raftkv_raft_tests+0x184f8c)
+    #6 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #7 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #9 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:666 (raftkv_raft_tests+0x100cdb)
+    #10 __invoke_impl<void, RaftPerf_A11_SlidingWindowOutOfOrderAcksAreIdempotent_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x1012d2)
+    #11 __invoke<RaftPerf_A11_SlidingWindowOutOfOrderAcksAreIdempotent_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0x1012d2)
+    #12 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0x1012d2)
+    #13 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0x1012d2)
+    #14 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0x1012d2)
+    #15 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Location is heap block of size 56 at 0x7b1000005640 allocated by main thread:
+    #0 operator new(unsigned long) ../../../../src/libsanitizer/tsan/tsan_new_delete.cpp:64 (libtsan.so.0+0x8f162)
+    #1 __gnu_cxx::new_allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >::allocate(unsigned long, void const*) /usr/include/c++/11/ext/new_allocator.h:127 (raftkv_raft_tests+0x179c9f)
+    #2 std::allocator_traits<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >::allocate(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&, unsigned long) /usr/include/c++/11/bits/alloc_traits.h:464 (raftkv_raft_tests+0x179c9f)
+    #3 std::__allocated_ptr<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > > std::__allocate_guarded<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&) /usr/include/c++/11/bits/allocated_ptr.h:98 (raftkv_raft_tests+0x179c9f)
+    #4 std::__shared_count<(__gnu_cxx::_Lock_policy)2>::__shared_count<std::mutex, std::allocator<std::mutex>>(std::mutex*&, std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:648 (raftkv_raft_tests+0x179c9f)
+    #5 std::__shared_ptr<std::mutex, (__gnu_cxx::_Lock_policy)2>::__shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:1342 (raftkv_raft_tests+0x179c9f)
+    #6 std::shared_ptr<std::mutex>::shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr.h:409 (raftkv_raft_tests+0x179c9f)
+    #7 std::shared_ptr<std::mutex> std::allocate_shared<std::mutex, std::allocator<std::mutex>>(std::allocator<std::mutex> const&) /usr/include/c++/11/bits/shared_ptr.h:863 (raftkv_raft_tests+0x179c9f)
+    #8 std::shared_ptr<std::mutex> std::make_shared<std::mutex>() /usr/include/c++/11/bits/shared_ptr.h:879 (raftkv_raft_tests+0x179c9f)
+    #9 std::_V2::condition_variable_any::condition_variable_any() /usr/include/c++/11/condition_variable:283 (raftkv_raft_tests+0x179c9f)
+    #10 raftkv::raft::RaftNode::RaftNode(raftkv::raft::RaftConfig, raftkv::raft::LogStore&, raftkv::raft::StateMachine&, raftkv::raft::Transport&, raftkv::raft::Clock&, raftkv::raft::SnapshotStore*, raftkv::raft::ClusterConfig const&, raftkv::raft::Metrics*) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:49 (raftkv_raft_tests+0x179c9f)
+    #11 RaftPerf_A11_SlidingWindowOutOfOrderAcksAreIdempotent_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:625 (raftkv_raft_tests+0x113e4c)
+    #12 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #13 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+  Mutex M889877710032098896 is already destroyed.
+
+SUMMARY: ThreadSanitizer: double lock of a mutex /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+==================
+WARNING: ThreadSanitizer: lock-order-inversion (potential deadlock) (pid=335616)
+  Cycle in lock order graph: M888757238963885840 (0x000000000000) => M889877710032098896 (0x000000000000) => M888757238963885840
+
+  Mutex M889877710032098896 acquired here while holding mutex M888757238963885840 in main thread:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x170dcc)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x170dcc)
+    #3 std::lock_guard<std::mutex>::lock_guard(std::mutex&) /usr/include/c++/11/bits/std_mutex.h:229 (raftkv_raft_tests+0x170dcc)
+    #4 std::_V2::condition_variable_any::notify_all() /usr/include/c++/11/condition_variable:299 (raftkv_raft_tests+0x170dcc)
+    #5 raftkv::raft::RaftNode::becomeLeader() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:164 (raftkv_raft_tests+0x170dcc)
+    #6 raftkv::raft::RaftNode::onRequestVoteReply(int, raftkv::raft::RequestVoteReply const&) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:638 (raftkv_raft_tests+0x171559)
+    #7 operator() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:418 (raftkv_raft_tests+0x17160a)
+    #8 __invoke_impl<void, raftkv::raft::RaftNode::tick()::<lambda(const raftkv::raft::RequestVoteReply&)>&, const raftkv::raft::RequestVoteReply&> /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x17160a)
+    #9 __invoke_r<void, raftkv::raft::RaftNode::tick()::<lambda(const raftkv::raft::RequestVoteReply&)>&, const raftkv::raft::RequestVoteReply&> /usr/include/c++/11/bits/invoke.h:111 (raftkv_raft_tests+0x17160a)
+    #10 _M_invoke /usr/include/c++/11/bits/std_function.h:290 (raftkv_raft_tests+0x17160a)
+    #11 std::function<void (raftkv::raft::RequestVoteReply const&)>::operator()(raftkv::raft::RequestVoteReply const&) const /usr/include/c++/11/bits/std_function.h:590 (raftkv_raft_tests+0x114642)
+    #12 RaftPerf_A11_SlidingWindowOutOfOrderAcksAreIdempotent_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:643 (raftkv_raft_tests+0x114642)
+    #13 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #14 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+    Hint: use TSAN_OPTIONS=second_deadlock_stack=1 to get more informative warning message
+
+  Mutex M888757238963885840 acquired here while holding mutex M889877710032098896 in thread T207:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x185347)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x185347)
+    #3 raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0>::lock() /home/tengyujie/raft-kv-lsm/src/raft/lock_probe.h:95 (raftkv_raft_tests+0x185347)
+    #4 std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x185347)
+    #5 std::_V2::condition_variable_any::_Unlock<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> > >::~_Unlock() /usr/include/c++/11/condition_variable:272 (raftkv_raft_tests+0x185347)
+    #6 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:337 (raftkv_raft_tests+0x185347)
+    #7 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #9 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #10 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:666 (raftkv_raft_tests+0x100cdb)
+    #11 __invoke_impl<void, RaftPerf_A11_SlidingWindowOutOfOrderAcksAreIdempotent_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x1012d2)
+    #12 __invoke<RaftPerf_A11_SlidingWindowOutOfOrderAcksAreIdempotent_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0x1012d2)
+    #13 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0x1012d2)
+    #14 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0x1012d2)
+    #15 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0x1012d2)
+    #16 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Thread T10 (tid=336022, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:969 (libtsan.so.0+0x605b8)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xdc328)
+    #2 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #3 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+SUMMARY: ThreadSanitizer: lock-order-inversion (potential deadlock) /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+[       OK ] RaftPerf.A11_SlidingWindowOutOfOrderAcksAreIdempotent (1121 ms)
+[ RUN      ] RaftPerf.A12_OverwrittenEntryIsNotReportedAsCommitted
+[       OK ] RaftPerf.A12_OverwrittenEntryIsNotReportedAsCommitted (6 ms)
+[ RUN      ] RaftPerf.A7_ConfigChangeStillCommits
+[       OK ] RaftPerf.A7_ConfigChangeStillCommits (5 ms)
+[ RUN      ] RaftPerf.A13_OverwriteDuringWaitIsNotReportedAsCommitted
+==================
+WARNING: ThreadSanitizer: double lock of a mutex (pid=335616)
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x16caf1)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x16caf1)
+    #3 std::lock_guard<std::mutex>::lock_guard(std::mutex&) /usr/include/c++/11/bits/std_mutex.h:229 (raftkv_raft_tests+0x16caf1)
+    #4 std::_V2::condition_variable_any::notify_all() /usr/include/c++/11/condition_variable:299 (raftkv_raft_tests+0x16caf1)
+    #5 raftkv::raft::RaftNode::becomeFollower(unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:140 (raftkv_raft_tests+0x16caf1)
+    #6 raftkv::raft::RaftNode::onAppendEntries(raftkv::raft::AppendEntriesArgs const&) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:522 (raftkv_raft_tests+0x1750ce)
+    #7 RaftPerf_A13_OverwriteDuringWaitIsNotReportedAsCommitted_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:973 (raftkv_raft_tests+0x11a613)
+    #8 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #9 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+  Location is heap block of size 56 at 0x7b1000008180 allocated by main thread:
+    #0 operator new(unsigned long) ../../../../src/libsanitizer/tsan/tsan_new_delete.cpp:64 (libtsan.so.0+0x8f162)
+    #1 __gnu_cxx::new_allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >::allocate(unsigned long, void const*) /usr/include/c++/11/ext/new_allocator.h:127 (raftkv_raft_tests+0x179c9f)
+    #2 std::allocator_traits<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >::allocate(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&, unsigned long) /usr/include/c++/11/bits/alloc_traits.h:464 (raftkv_raft_tests+0x179c9f)
+    #3 std::__allocated_ptr<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > > std::__allocate_guarded<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&) /usr/include/c++/11/bits/allocated_ptr.h:98 (raftkv_raft_tests+0x179c9f)
+    #4 std::__shared_count<(__gnu_cxx::_Lock_policy)2>::__shared_count<std::mutex, std::allocator<std::mutex>>(std::mutex*&, std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:648 (raftkv_raft_tests+0x179c9f)
+    #5 std::__shared_ptr<std::mutex, (__gnu_cxx::_Lock_policy)2>::__shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:1342 (raftkv_raft_tests+0x179c9f)
+    #6 std::shared_ptr<std::mutex>::shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr.h:409 (raftkv_raft_tests+0x179c9f)
+    #7 std::shared_ptr<std::mutex> std::allocate_shared<std::mutex, std::allocator<std::mutex>>(std::allocator<std::mutex> const&) /usr/include/c++/11/bits/shared_ptr.h:863 (raftkv_raft_tests+0x179c9f)
+    #8 std::shared_ptr<std::mutex> std::make_shared<std::mutex>() /usr/include/c++/11/bits/shared_ptr.h:879 (raftkv_raft_tests+0x179c9f)
+    #9 std::_V2::condition_variable_any::condition_variable_any() /usr/include/c++/11/condition_variable:283 (raftkv_raft_tests+0x179c9f)
+    #10 raftkv::raft::RaftNode::RaftNode(raftkv::raft::RaftConfig, raftkv::raft::LogStore&, raftkv::raft::StateMachine&, raftkv::raft::Transport&, raftkv::raft::Clock&, raftkv::raft::SnapshotStore*, raftkv::raft::ClusterConfig const&, raftkv::raft::Metrics*) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:49 (raftkv_raft_tests+0x179c9f)
+    #11 RaftPerf_A13_OverwriteDuringWaitIsNotReportedAsCommitted_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:906 (raftkv_raft_tests+0x119383)
+    #12 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #13 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+  Mutex M929847156725023120 is already destroyed.
+
+SUMMARY: ThreadSanitizer: double lock of a mutex /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+==================
+WARNING: ThreadSanitizer: lock-order-inversion (potential deadlock) (pid=335616)
+  Cycle in lock order graph: M252 (0x7fffffffe1d0) => M929847156725023120 (0x000000000000) => M252
+
+  Mutex M929847156725023120 acquired here while holding mutex M252 in main thread:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x170dcc)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x170dcc)
+    #3 std::lock_guard<std::mutex>::lock_guard(std::mutex&) /usr/include/c++/11/bits/std_mutex.h:229 (raftkv_raft_tests+0x170dcc)
+    #4 std::_V2::condition_variable_any::notify_all() /usr/include/c++/11/condition_variable:299 (raftkv_raft_tests+0x170dcc)
+    #5 raftkv::raft::RaftNode::becomeLeader() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:164 (raftkv_raft_tests+0x170dcc)
+    #6 raftkv::raft::RaftNode::onRequestVoteReply(int, raftkv::raft::RequestVoteReply const&) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:638 (raftkv_raft_tests+0x171559)
+    #7 operator() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:418 (raftkv_raft_tests+0x17160a)
+    #8 __invoke_impl<void, raftkv::raft::RaftNode::tick()::<lambda(const raftkv::raft::RequestVoteReply&)>&, const raftkv::raft::RequestVoteReply&> /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x17160a)
+    #9 __invoke_r<void, raftkv::raft::RaftNode::tick()::<lambda(const raftkv::raft::RequestVoteReply&)>&, const raftkv::raft::RequestVoteReply&> /usr/include/c++/11/bits/invoke.h:111 (raftkv_raft_tests+0x17160a)
+    #10 _M_invoke /usr/include/c++/11/bits/std_function.h:290 (raftkv_raft_tests+0x17160a)
+    #11 std::function<void (raftkv::raft::RequestVoteReply const&)>::operator()(raftkv::raft::RequestVoteReply const&) const /usr/include/c++/11/bits/std_function.h:590 (raftkv_raft_tests+0x11959e)
+    #12 RaftPerf_A13_OverwriteDuringWaitIsNotReportedAsCommitted_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:915 (raftkv_raft_tests+0x11959e)
+    #13 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #14 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+    Hint: use TSAN_OPTIONS=second_deadlock_stack=1 to get more informative warning message
+
+  Mutex M252 acquired here while holding mutex M929847156725023120 in thread T217:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x185347)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x185347)
+    #3 raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0>::lock() /home/tengyujie/raft-kv-lsm/src/raft/lock_probe.h:95 (raftkv_raft_tests+0x185347)
+    #4 std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x185347)
+    #5 std::_V2::condition_variable_any::_Unlock<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> > >::~_Unlock() /usr/include/c++/11/condition_variable:272 (raftkv_raft_tests+0x185347)
+    #6 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:337 (raftkv_raft_tests+0x185347)
+    #7 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #9 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #10 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:945 (raftkv_raft_tests+0xfe926)
+    #11 __invoke_impl<void, RaftPerf_A13_OverwriteDuringWaitIsNotReportedAsCommitted_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0xfe926)
+    #12 __invoke<RaftPerf_A13_OverwriteDuringWaitIsNotReportedAsCommitted_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0xfe926)
+    #13 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0xfe926)
+    #14 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0xfe926)
+    #15 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0xfe926)
+    #16 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Thread T21 (tid=336032, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:969 (libtsan.so.0+0x605b8)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xdc328)
+    #2 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #3 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+SUMMARY: ThreadSanitizer: lock-order-inversion (potential deadlock) /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+[       OK ] RaftPerf.A13_OverwriteDuringWaitIsNotReportedAsCommitted (160 ms)
+[ RUN      ] RaftPerf.A14_SyncDoesNotBlockAppends
+[       OK ] RaftPerf.A14_SyncDoesNotBlockAppends (154 ms)
+[ RUN      ] RaftPerf.A15_WaitPathFlusherHandoffIsNotLost
+==================
+WARNING: ThreadSanitizer: double lock of a mutex (pid=335616)
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x184f8c)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x184f8c)
+    #3 std::unique_lock<std::mutex>::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x184f8c)
+    #4 std::unique_lock<std::mutex>::unique_lock(std::mutex&) /usr/include/c++/11/bits/unique_lock.h:69 (raftkv_raft_tests+0x184f8c)
+    #5 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:331 (raftkv_raft_tests+0x184f8c)
+    #6 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #7 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #9 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1101 (raftkv_raft_tests+0xffe75)
+    #10 __invoke_impl<void, RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x1001fa)
+    #11 __invoke<RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0x1001fa)
+    #12 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0x1001fa)
+    #13 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0x1001fa)
+    #14 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0x1001fa)
+    #15 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Location is heap block of size 56 at 0x7b1000005c00 allocated by main thread:
+    #0 operator new(unsigned long) ../../../../src/libsanitizer/tsan/tsan_new_delete.cpp:64 (libtsan.so.0+0x8f162)
+    #1 __gnu_cxx::new_allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >::allocate(unsigned long, void const*) /usr/include/c++/11/ext/new_allocator.h:127 (raftkv_raft_tests+0x179c9f)
+    #2 std::allocator_traits<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >::allocate(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&, unsigned long) /usr/include/c++/11/bits/alloc_traits.h:464 (raftkv_raft_tests+0x179c9f)
+    #3 std::__allocated_ptr<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > > std::__allocate_guarded<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&) /usr/include/c++/11/bits/allocated_ptr.h:98 (raftkv_raft_tests+0x179c9f)
+    #4 std::__shared_count<(__gnu_cxx::_Lock_policy)2>::__shared_count<std::mutex, std::allocator<std::mutex>>(std::mutex*&, std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:648 (raftkv_raft_tests+0x179c9f)
+    #5 std::__shared_ptr<std::mutex, (__gnu_cxx::_Lock_policy)2>::__shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:1342 (raftkv_raft_tests+0x179c9f)
+    #6 std::shared_ptr<std::mutex>::shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr.h:409 (raftkv_raft_tests+0x179c9f)
+    #7 std::shared_ptr<std::mutex> std::allocate_shared<std::mutex, std::allocator<std::mutex>>(std::allocator<std::mutex> const&) /usr/include/c++/11/bits/shared_ptr.h:863 (raftkv_raft_tests+0x179c9f)
+    #8 std::shared_ptr<std::mutex> std::make_shared<std::mutex>() /usr/include/c++/11/bits/shared_ptr.h:879 (raftkv_raft_tests+0x179c9f)
+    #9 std::_V2::condition_variable_any::condition_variable_any() /usr/include/c++/11/condition_variable:283 (raftkv_raft_tests+0x179c9f)
+    #10 raftkv::raft::RaftNode::RaftNode(raftkv::raft::RaftConfig, raftkv::raft::LogStore&, raftkv::raft::StateMachine&, raftkv::raft::Transport&, raftkv::raft::Clock&, raftkv::raft::SnapshotStore*, raftkv::raft::ClusterConfig const&, raftkv::raft::Metrics*) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:49 (raftkv_raft_tests+0x179c9f)
+    #11 RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1075 (raftkv_raft_tests+0x11b986)
+    #12 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #13 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+  Mutex M935758131235937296 is already destroyed.
+
+SUMMARY: ThreadSanitizer: double lock of a mutex /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+==================
+WARNING: ThreadSanitizer: lock-order-inversion (potential deadlock) (pid=335616)
+  Cycle in lock order graph: M252 (0x7fffffffe1d0) => M935758131235937296 (0x000000000000) => M252
+
+  Mutex M935758131235937296 acquired here while holding mutex M252 in main thread:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x170dcc)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x170dcc)
+    #3 std::lock_guard<std::mutex>::lock_guard(std::mutex&) /usr/include/c++/11/bits/std_mutex.h:229 (raftkv_raft_tests+0x170dcc)
+    #4 std::_V2::condition_variable_any::notify_all() /usr/include/c++/11/condition_variable:299 (raftkv_raft_tests+0x170dcc)
+    #5 raftkv::raft::RaftNode::becomeLeader() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:164 (raftkv_raft_tests+0x170dcc)
+    #6 raftkv::raft::RaftNode::startElection(unsigned long, std::vector<std::pair<int, raftkv::raft::RequestVoteArgs>, std::allocator<std::pair<int, raftkv::raft::RequestVoteArgs> > >&) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:183 (raftkv_raft_tests+0x17103d)
+    #7 raftkv::raft::RaftNode::tick() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:341 (raftkv_raft_tests+0x17c6fd)
+    #8 RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1078 (raftkv_raft_tests+0x11baa1)
+    #9 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #10 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+    Hint: use TSAN_OPTIONS=second_deadlock_stack=1 to get more informative warning message
+
+  Mutex M252 acquired here while holding mutex M935758131235937296 in thread T223:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x185347)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x185347)
+    #3 raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0>::lock() /home/tengyujie/raft-kv-lsm/src/raft/lock_probe.h:95 (raftkv_raft_tests+0x185347)
+    #4 std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x185347)
+    #5 std::_V2::condition_variable_any::_Unlock<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> > >::~_Unlock() /usr/include/c++/11/condition_variable:272 (raftkv_raft_tests+0x185347)
+    #6 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:337 (raftkv_raft_tests+0x185347)
+    #7 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #9 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #10 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1101 (raftkv_raft_tests+0xffe75)
+    #11 __invoke_impl<void, RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x1001fa)
+    #12 __invoke<RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0x1001fa)
+    #13 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0x1001fa)
+    #14 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0x1001fa)
+    #15 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0x1001fa)
+    #16 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Thread T18 (tid=336038, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:969 (libtsan.so.0+0x605b8)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xdc328)
+    #2 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #3 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+SUMMARY: ThreadSanitizer: lock-order-inversion (potential deadlock) /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+==================
+WARNING: ThreadSanitizer: double lock of a mutex (pid=335616)
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x184f8c)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x184f8c)
+    #3 std::unique_lock<std::mutex>::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x184f8c)
+    #4 std::unique_lock<std::mutex>::unique_lock(std::mutex&) /usr/include/c++/11/bits/unique_lock.h:69 (raftkv_raft_tests+0x184f8c)
+    #5 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:331 (raftkv_raft_tests+0x184f8c)
+    #6 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #7 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #9 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1101 (raftkv_raft_tests+0xffe75)
+    #10 __invoke_impl<void, RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x1001fa)
+    #11 __invoke<RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0x1001fa)
+    #12 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0x1001fa)
+    #13 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0x1001fa)
+    #14 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0x1001fa)
+    #15 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Location is heap block of size 56 at 0x7b1000005c00 allocated by main thread:
+    #0 operator new(unsigned long) ../../../../src/libsanitizer/tsan/tsan_new_delete.cpp:64 (libtsan.so.0+0x8f162)
+    #1 __gnu_cxx::new_allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >::allocate(unsigned long, void const*) /usr/include/c++/11/ext/new_allocator.h:127 (raftkv_raft_tests+0x179c9f)
+    #2 std::allocator_traits<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >::allocate(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&, unsigned long) /usr/include/c++/11/bits/alloc_traits.h:464 (raftkv_raft_tests+0x179c9f)
+    #3 std::__allocated_ptr<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > > std::__allocate_guarded<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&) /usr/include/c++/11/bits/allocated_ptr.h:98 (raftkv_raft_tests+0x179c9f)
+    #4 std::__shared_count<(__gnu_cxx::_Lock_policy)2>::__shared_count<std::mutex, std::allocator<std::mutex>>(std::mutex*&, std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:648 (raftkv_raft_tests+0x179c9f)
+    #5 std::__shared_ptr<std::mutex, (__gnu_cxx::_Lock_policy)2>::__shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:1342 (raftkv_raft_tests+0x179c9f)
+    #6 std::shared_ptr<std::mutex>::shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr.h:409 (raftkv_raft_tests+0x179c9f)
+    #7 std::shared_ptr<std::mutex> std::allocate_shared<std::mutex, std::allocator<std::mutex>>(std::allocator<std::mutex> const&) /usr/include/c++/11/bits/shared_ptr.h:863 (raftkv_raft_tests+0x179c9f)
+    #8 std::shared_ptr<std::mutex> std::make_shared<std::mutex>() /usr/include/c++/11/bits/shared_ptr.h:879 (raftkv_raft_tests+0x179c9f)
+    #9 std::_V2::condition_variable_any::condition_variable_any() /usr/include/c++/11/condition_variable:283 (raftkv_raft_tests+0x179c9f)
+    #10 raftkv::raft::RaftNode::RaftNode(raftkv::raft::RaftConfig, raftkv::raft::LogStore&, raftkv::raft::StateMachine&, raftkv::raft::Transport&, raftkv::raft::Clock&, raftkv::raft::SnapshotStore*, raftkv::raft::ClusterConfig const&, raftkv::raft::Metrics*) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:49 (raftkv_raft_tests+0x179c9f)
+    #11 RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1075 (raftkv_raft_tests+0x11b986)
+    #12 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #13 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+  Mutex M939135830956465168 is already destroyed.
+
+SUMMARY: ThreadSanitizer: double lock of a mutex /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+==================
+WARNING: ThreadSanitizer: lock-order-inversion (potential deadlock) (pid=335616)
+  Cycle in lock order graph: M252 (0x7fffffffe1d0) => M939135830956465168 (0x000000000000) => M252
+
+  Mutex M939135830956465168 acquired here while holding mutex M252 in main thread:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x170dcc)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x170dcc)
+    #3 std::lock_guard<std::mutex>::lock_guard(std::mutex&) /usr/include/c++/11/bits/std_mutex.h:229 (raftkv_raft_tests+0x170dcc)
+    #4 std::_V2::condition_variable_any::notify_all() /usr/include/c++/11/condition_variable:299 (raftkv_raft_tests+0x170dcc)
+    #5 raftkv::raft::RaftNode::becomeLeader() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:164 (raftkv_raft_tests+0x170dcc)
+    #6 raftkv::raft::RaftNode::startElection(unsigned long, std::vector<std::pair<int, raftkv::raft::RequestVoteArgs>, std::allocator<std::pair<int, raftkv::raft::RequestVoteArgs> > >&) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:183 (raftkv_raft_tests+0x17103d)
+    #7 raftkv::raft::RaftNode::tick() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:341 (raftkv_raft_tests+0x17c6fd)
+    #8 RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1078 (raftkv_raft_tests+0x11baa1)
+    #9 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #10 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+    Hint: use TSAN_OPTIONS=second_deadlock_stack=1 to get more informative warning message
+
+  Mutex M252 acquired here while holding mutex M939135830956465168 in thread T232:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x185347)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x185347)
+    #3 raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0>::lock() /home/tengyujie/raft-kv-lsm/src/raft/lock_probe.h:95 (raftkv_raft_tests+0x185347)
+    #4 std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x185347)
+    #5 std::_V2::condition_variable_any::_Unlock<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> > >::~_Unlock() /usr/include/c++/11/condition_variable:272 (raftkv_raft_tests+0x185347)
+    #6 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:337 (raftkv_raft_tests+0x185347)
+    #7 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #9 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #10 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1101 (raftkv_raft_tests+0xffe75)
+    #11 __invoke_impl<void, RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x1001fa)
+    #12 __invoke<RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0x1001fa)
+    #13 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0x1001fa)
+    #14 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0x1001fa)
+    #15 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0x1001fa)
+    #16 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Thread T9 (tid=336047, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:969 (libtsan.so.0+0x605b8)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xdc328)
+    #2 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #3 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+SUMMARY: ThreadSanitizer: lock-order-inversion (potential deadlock) /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+==================
+WARNING: ThreadSanitizer: double lock of a mutex (pid=335616)
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x184f8c)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x184f8c)
+    #3 std::unique_lock<std::mutex>::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x184f8c)
+    #4 std::unique_lock<std::mutex>::unique_lock(std::mutex&) /usr/include/c++/11/bits/unique_lock.h:69 (raftkv_raft_tests+0x184f8c)
+    #5 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:331 (raftkv_raft_tests+0x184f8c)
+    #6 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #7 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #9 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1101 (raftkv_raft_tests+0xffe75)
+    #10 __invoke_impl<void, RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x1001fa)
+    #11 __invoke<RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0x1001fa)
+    #12 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0x1001fa)
+    #13 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0x1001fa)
+    #14 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0x1001fa)
+    #15 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Location is heap block of size 56 at 0x7b1000005c00 allocated by main thread:
+    #0 operator new(unsigned long) ../../../../src/libsanitizer/tsan/tsan_new_delete.cpp:64 (libtsan.so.0+0x8f162)
+    #1 __gnu_cxx::new_allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >::allocate(unsigned long, void const*) /usr/include/c++/11/ext/new_allocator.h:127 (raftkv_raft_tests+0x179c9f)
+    #2 std::allocator_traits<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >::allocate(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&, unsigned long) /usr/include/c++/11/bits/alloc_traits.h:464 (raftkv_raft_tests+0x179c9f)
+    #3 std::__allocated_ptr<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > > std::__allocate_guarded<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&) /usr/include/c++/11/bits/allocated_ptr.h:98 (raftkv_raft_tests+0x179c9f)
+    #4 std::__shared_count<(__gnu_cxx::_Lock_policy)2>::__shared_count<std::mutex, std::allocator<std::mutex>>(std::mutex*&, std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:648 (raftkv_raft_tests+0x179c9f)
+    #5 std::__shared_ptr<std::mutex, (__gnu_cxx::_Lock_policy)2>::__shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:1342 (raftkv_raft_tests+0x179c9f)
+    #6 std::shared_ptr<std::mutex>::shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr.h:409 (raftkv_raft_tests+0x179c9f)
+    #7 std::shared_ptr<std::mutex> std::allocate_shared<std::mutex, std::allocator<std::mutex>>(std::allocator<std::mutex> const&) /usr/include/c++/11/bits/shared_ptr.h:863 (raftkv_raft_tests+0x179c9f)
+    #8 std::shared_ptr<std::mutex> std::make_shared<std::mutex>() /usr/include/c++/11/bits/shared_ptr.h:879 (raftkv_raft_tests+0x179c9f)
+    #9 std::_V2::condition_variable_any::condition_variable_any() /usr/include/c++/11/condition_variable:283 (raftkv_raft_tests+0x179c9f)
+    #10 raftkv::raft::RaftNode::RaftNode(raftkv::raft::RaftConfig, raftkv::raft::LogStore&, raftkv::raft::StateMachine&, raftkv::raft::Transport&, raftkv::raft::Clock&, raftkv::raft::SnapshotStore*, raftkv::raft::ClusterConfig const&, raftkv::raft::Metrics*) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:49 (raftkv_raft_tests+0x179c9f)
+    #11 RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1075 (raftkv_raft_tests+0x11b986)
+    #12 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #13 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+  Mutex M941669105746861072 is already destroyed.
+
+SUMMARY: ThreadSanitizer: double lock of a mutex /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+==================
+WARNING: ThreadSanitizer: lock-order-inversion (potential deadlock) (pid=335616)
+  Cycle in lock order graph: M252 (0x7fffffffe1d0) => M941669105746861072 (0x000000000000) => M252
+
+  Mutex M941669105746861072 acquired here while holding mutex M252 in main thread:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x170dcc)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x170dcc)
+    #3 std::lock_guard<std::mutex>::lock_guard(std::mutex&) /usr/include/c++/11/bits/std_mutex.h:229 (raftkv_raft_tests+0x170dcc)
+    #4 std::_V2::condition_variable_any::notify_all() /usr/include/c++/11/condition_variable:299 (raftkv_raft_tests+0x170dcc)
+    #5 raftkv::raft::RaftNode::becomeLeader() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:164 (raftkv_raft_tests+0x170dcc)
+    #6 raftkv::raft::RaftNode::startElection(unsigned long, std::vector<std::pair<int, raftkv::raft::RequestVoteArgs>, std::allocator<std::pair<int, raftkv::raft::RequestVoteArgs> > >&) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:183 (raftkv_raft_tests+0x17103d)
+    #7 raftkv::raft::RaftNode::tick() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:341 (raftkv_raft_tests+0x17c6fd)
+    #8 RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1078 (raftkv_raft_tests+0x11baa1)
+    #9 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #10 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+    Hint: use TSAN_OPTIONS=second_deadlock_stack=1 to get more informative warning message
+
+  Mutex M252 acquired here while holding mutex M941669105746861072 in thread T237:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x185347)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x185347)
+    #3 raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0>::lock() /home/tengyujie/raft-kv-lsm/src/raft/lock_probe.h:95 (raftkv_raft_tests+0x185347)
+    #4 std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x185347)
+    #5 std::_V2::condition_variable_any::_Unlock<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> > >::~_Unlock() /usr/include/c++/11/condition_variable:272 (raftkv_raft_tests+0x185347)
+    #6 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:337 (raftkv_raft_tests+0x185347)
+    #7 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #9 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #10 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1101 (raftkv_raft_tests+0xffe75)
+    #11 __invoke_impl<void, RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x1001fa)
+    #12 __invoke<RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0x1001fa)
+    #13 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0x1001fa)
+    #14 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0x1001fa)
+    #15 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0x1001fa)
+    #16 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Thread T23 (tid=336052, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:969 (libtsan.so.0+0x605b8)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xdc328)
+    #2 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #3 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+SUMMARY: ThreadSanitizer: lock-order-inversion (potential deadlock) /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+==================
+WARNING: ThreadSanitizer: double lock of a mutex (pid=335616)
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x184f8c)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x184f8c)
+    #3 std::unique_lock<std::mutex>::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x184f8c)
+    #4 std::unique_lock<std::mutex>::unique_lock(std::mutex&) /usr/include/c++/11/bits/unique_lock.h:69 (raftkv_raft_tests+0x184f8c)
+    #5 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:331 (raftkv_raft_tests+0x184f8c)
+    #6 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #7 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #9 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1101 (raftkv_raft_tests+0xffe75)
+    #10 __invoke_impl<void, RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x1001fa)
+    #11 __invoke<RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0x1001fa)
+    #12 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0x1001fa)
+    #13 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0x1001fa)
+    #14 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0x1001fa)
+    #15 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Location is heap block of size 56 at 0x7b1000005c00 allocated by main thread:
+    #0 operator new(unsigned long) ../../../../src/libsanitizer/tsan/tsan_new_delete.cpp:64 (libtsan.so.0+0x8f162)
+    #1 __gnu_cxx::new_allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >::allocate(unsigned long, void const*) /usr/include/c++/11/ext/new_allocator.h:127 (raftkv_raft_tests+0x179c9f)
+    #2 std::allocator_traits<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >::allocate(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&, unsigned long) /usr/include/c++/11/bits/alloc_traits.h:464 (raftkv_raft_tests+0x179c9f)
+    #3 std::__allocated_ptr<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > > std::__allocate_guarded<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&) /usr/include/c++/11/bits/allocated_ptr.h:98 (raftkv_raft_tests+0x179c9f)
+    #4 std::__shared_count<(__gnu_cxx::_Lock_policy)2>::__shared_count<std::mutex, std::allocator<std::mutex>>(std::mutex*&, std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:648 (raftkv_raft_tests+0x179c9f)
+    #5 std::__shared_ptr<std::mutex, (__gnu_cxx::_Lock_policy)2>::__shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:1342 (raftkv_raft_tests+0x179c9f)
+    #6 std::shared_ptr<std::mutex>::shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr.h:409 (raftkv_raft_tests+0x179c9f)
+    #7 std::shared_ptr<std::mutex> std::allocate_shared<std::mutex, std::allocator<std::mutex>>(std::allocator<std::mutex> const&) /usr/include/c++/11/bits/shared_ptr.h:863 (raftkv_raft_tests+0x179c9f)
+    #8 std::shared_ptr<std::mutex> std::make_shared<std::mutex>() /usr/include/c++/11/bits/shared_ptr.h:879 (raftkv_raft_tests+0x179c9f)
+    #9 std::_V2::condition_variable_any::condition_variable_any() /usr/include/c++/11/condition_variable:283 (raftkv_raft_tests+0x179c9f)
+    #10 raftkv::raft::RaftNode::RaftNode(raftkv::raft::RaftConfig, raftkv::raft::LogStore&, raftkv::raft::StateMachine&, raftkv::raft::Transport&, raftkv::raft::Clock&, raftkv::raft::SnapshotStore*, raftkv::raft::ClusterConfig const&, raftkv::raft::Metrics*) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:49 (raftkv_raft_tests+0x179c9f)
+    #11 RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1075 (raftkv_raft_tests+0x11b986)
+    #12 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #13 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+  Mutex M944202380537256976 is already destroyed.
+
+SUMMARY: ThreadSanitizer: double lock of a mutex /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+==================
+WARNING: ThreadSanitizer: lock-order-inversion (potential deadlock) (pid=335616)
+  Cycle in lock order graph: M252 (0x7fffffffe1d0) => M944202380537256976 (0x000000000000) => M252
+
+  Mutex M944202380537256976 acquired here while holding mutex M252 in main thread:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x170dcc)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x170dcc)
+    #3 std::lock_guard<std::mutex>::lock_guard(std::mutex&) /usr/include/c++/11/bits/std_mutex.h:229 (raftkv_raft_tests+0x170dcc)
+    #4 std::_V2::condition_variable_any::notify_all() /usr/include/c++/11/condition_variable:299 (raftkv_raft_tests+0x170dcc)
+    #5 raftkv::raft::RaftNode::becomeLeader() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:164 (raftkv_raft_tests+0x170dcc)
+    #6 raftkv::raft::RaftNode::startElection(unsigned long, std::vector<std::pair<int, raftkv::raft::RequestVoteArgs>, std::allocator<std::pair<int, raftkv::raft::RequestVoteArgs> > >&) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:183 (raftkv_raft_tests+0x17103d)
+    #7 raftkv::raft::RaftNode::tick() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:341 (raftkv_raft_tests+0x17c6fd)
+    #8 RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1078 (raftkv_raft_tests+0x11baa1)
+    #9 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #10 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+    Hint: use TSAN_OPTIONS=second_deadlock_stack=1 to get more informative warning message
+
+  Mutex M252 acquired here while holding mutex M944202380537256976 in thread T243:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x185347)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x185347)
+    #3 raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0>::lock() /home/tengyujie/raft-kv-lsm/src/raft/lock_probe.h:95 (raftkv_raft_tests+0x185347)
+    #4 std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x185347)
+    #5 std::_V2::condition_variable_any::_Unlock<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> > >::~_Unlock() /usr/include/c++/11/condition_variable:272 (raftkv_raft_tests+0x185347)
+    #6 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:337 (raftkv_raft_tests+0x185347)
+    #7 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #9 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #10 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1101 (raftkv_raft_tests+0xffe75)
+    #11 __invoke_impl<void, RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x1001fa)
+    #12 __invoke<RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0x1001fa)
+    #13 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0x1001fa)
+    #14 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0x1001fa)
+    #15 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0x1001fa)
+    #16 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Thread T19 (tid=336058, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:969 (libtsan.so.0+0x605b8)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xdc328)
+    #2 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #3 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+SUMMARY: ThreadSanitizer: lock-order-inversion (potential deadlock) /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+==================
+WARNING: ThreadSanitizer: double lock of a mutex (pid=335616)
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x184f8c)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x184f8c)
+    #3 std::unique_lock<std::mutex>::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x184f8c)
+    #4 std::unique_lock<std::mutex>::unique_lock(std::mutex&) /usr/include/c++/11/bits/unique_lock.h:69 (raftkv_raft_tests+0x184f8c)
+    #5 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:331 (raftkv_raft_tests+0x184f8c)
+    #6 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #7 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #9 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1101 (raftkv_raft_tests+0xffe75)
+    #10 __invoke_impl<void, RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x1001fa)
+    #11 __invoke<RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0x1001fa)
+    #12 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0x1001fa)
+    #13 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0x1001fa)
+    #14 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0x1001fa)
+    #15 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Location is heap block of size 56 at 0x7b1000005c00 allocated by main thread:
+    #0 operator new(unsigned long) ../../../../src/libsanitizer/tsan/tsan_new_delete.cpp:64 (libtsan.so.0+0x8f162)
+    #1 __gnu_cxx::new_allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >::allocate(unsigned long, void const*) /usr/include/c++/11/ext/new_allocator.h:127 (raftkv_raft_tests+0x179c9f)
+    #2 std::allocator_traits<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >::allocate(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&, unsigned long) /usr/include/c++/11/bits/alloc_traits.h:464 (raftkv_raft_tests+0x179c9f)
+    #3 std::__allocated_ptr<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > > std::__allocate_guarded<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&) /usr/include/c++/11/bits/allocated_ptr.h:98 (raftkv_raft_tests+0x179c9f)
+    #4 std::__shared_count<(__gnu_cxx::_Lock_policy)2>::__shared_count<std::mutex, std::allocator<std::mutex>>(std::mutex*&, std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:648 (raftkv_raft_tests+0x179c9f)
+    #5 std::__shared_ptr<std::mutex, (__gnu_cxx::_Lock_policy)2>::__shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:1342 (raftkv_raft_tests+0x179c9f)
+    #6 std::shared_ptr<std::mutex>::shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr.h:409 (raftkv_raft_tests+0x179c9f)
+    #7 std::shared_ptr<std::mutex> std::allocate_shared<std::mutex, std::allocator<std::mutex>>(std::allocator<std::mutex> const&) /usr/include/c++/11/bits/shared_ptr.h:863 (raftkv_raft_tests+0x179c9f)
+    #8 std::shared_ptr<std::mutex> std::make_shared<std::mutex>() /usr/include/c++/11/bits/shared_ptr.h:879 (raftkv_raft_tests+0x179c9f)
+    #9 std::_V2::condition_variable_any::condition_variable_any() /usr/include/c++/11/condition_variable:283 (raftkv_raft_tests+0x179c9f)
+    #10 raftkv::raft::RaftNode::RaftNode(raftkv::raft::RaftConfig, raftkv::raft::LogStore&, raftkv::raft::StateMachine&, raftkv::raft::Transport&, raftkv::raft::Clock&, raftkv::raft::SnapshotStore*, raftkv::raft::ClusterConfig const&, raftkv::raft::Metrics*) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:49 (raftkv_raft_tests+0x179c9f)
+    #11 RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1075 (raftkv_raft_tests+0x11b986)
+    #12 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #13 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+  Mutex M946735655327652880 is already destroyed.
+
+SUMMARY: ThreadSanitizer: double lock of a mutex /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+==================
+WARNING: ThreadSanitizer: lock-order-inversion (potential deadlock) (pid=335616)
+  Cycle in lock order graph: M252 (0x7fffffffe1d0) => M946735655327652880 (0x000000000000) => M252
+
+  Mutex M946735655327652880 acquired here while holding mutex M252 in main thread:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x170dcc)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x170dcc)
+    #3 std::lock_guard<std::mutex>::lock_guard(std::mutex&) /usr/include/c++/11/bits/std_mutex.h:229 (raftkv_raft_tests+0x170dcc)
+    #4 std::_V2::condition_variable_any::notify_all() /usr/include/c++/11/condition_variable:299 (raftkv_raft_tests+0x170dcc)
+    #5 raftkv::raft::RaftNode::becomeLeader() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:164 (raftkv_raft_tests+0x170dcc)
+    #6 raftkv::raft::RaftNode::startElection(unsigned long, std::vector<std::pair<int, raftkv::raft::RequestVoteArgs>, std::allocator<std::pair<int, raftkv::raft::RequestVoteArgs> > >&) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:183 (raftkv_raft_tests+0x17103d)
+    #7 raftkv::raft::RaftNode::tick() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:341 (raftkv_raft_tests+0x17c6fd)
+    #8 RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1078 (raftkv_raft_tests+0x11baa1)
+    #9 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #10 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+    Hint: use TSAN_OPTIONS=second_deadlock_stack=1 to get more informative warning message
+
+  Mutex M252 acquired here while holding mutex M946735655327652880 in thread T251:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x185347)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x185347)
+    #3 raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0>::lock() /home/tengyujie/raft-kv-lsm/src/raft/lock_probe.h:95 (raftkv_raft_tests+0x185347)
+    #4 std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x185347)
+    #5 std::_V2::condition_variable_any::_Unlock<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> > >::~_Unlock() /usr/include/c++/11/condition_variable:272 (raftkv_raft_tests+0x185347)
+    #6 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:337 (raftkv_raft_tests+0x185347)
+    #7 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #9 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #10 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1101 (raftkv_raft_tests+0xffe75)
+    #11 __invoke_impl<void, RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x1001fa)
+    #12 __invoke<RaftPerf_A15_WaitPathFlusherHandoffIsNotLost_Test::TestBody()::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0x1001fa)
+    #13 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0x1001fa)
+    #14 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0x1001fa)
+    #15 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0x1001fa)
+    #16 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Thread T3 (tid=336066, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:969 (libtsan.so.0+0x605b8)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xdc328)
+    #2 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #3 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+SUMMARY: ThreadSanitizer: lock-order-inversion (potential deadlock) /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+[       OK ] RaftPerf.A15_WaitPathFlusherHandoffIsNotLost (1066 ms)
+[ RUN      ] RaftPerf.A16_NextFlushWaitsForInFlightSends
+==================
+WARNING: ThreadSanitizer: double lock of a mutex (pid=335616)
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x184f8c)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x184f8c)
+    #3 std::unique_lock<std::mutex>::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x184f8c)
+    #4 std::unique_lock<std::mutex>::unique_lock(std::mutex&) /usr/include/c++/11/bits/unique_lock.h:69 (raftkv_raft_tests+0x184f8c)
+    #5 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:331 (raftkv_raft_tests+0x184f8c)
+    #6 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #7 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #9 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1234 (raftkv_raft_tests+0x10182d)
+    #10 __invoke_impl<void, RaftPerf_A16_NextFlushWaitsForInFlightSends_Test::TestBody()::<lambda(int)>::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x10182d)
+    #11 __invoke<RaftPerf_A16_NextFlushWaitsForInFlightSends_Test::TestBody()::<lambda(int)>::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0x10182d)
+    #12 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0x10182d)
+    #13 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0x10182d)
+    #14 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0x10182d)
+    #15 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Location is heap block of size 56 at 0x7b1000008180 allocated by main thread:
+    #0 operator new(unsigned long) ../../../../src/libsanitizer/tsan/tsan_new_delete.cpp:64 (libtsan.so.0+0x8f162)
+    #1 __gnu_cxx::new_allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >::allocate(unsigned long, void const*) /usr/include/c++/11/ext/new_allocator.h:127 (raftkv_raft_tests+0x179c9f)
+    #2 std::allocator_traits<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >::allocate(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&, unsigned long) /usr/include/c++/11/bits/alloc_traits.h:464 (raftkv_raft_tests+0x179c9f)
+    #3 std::__allocated_ptr<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > > std::__allocate_guarded<std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> > >(std::allocator<std::_Sp_counted_ptr_inplace<std::mutex, std::allocator<std::mutex>, (__gnu_cxx::_Lock_policy)2> >&) /usr/include/c++/11/bits/allocated_ptr.h:98 (raftkv_raft_tests+0x179c9f)
+    #4 std::__shared_count<(__gnu_cxx::_Lock_policy)2>::__shared_count<std::mutex, std::allocator<std::mutex>>(std::mutex*&, std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:648 (raftkv_raft_tests+0x179c9f)
+    #5 std::__shared_ptr<std::mutex, (__gnu_cxx::_Lock_policy)2>::__shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr_base.h:1342 (raftkv_raft_tests+0x179c9f)
+    #6 std::shared_ptr<std::mutex>::shared_ptr<std::allocator<std::mutex>>(std::_Sp_alloc_shared_tag<std::allocator<std::mutex> >) /usr/include/c++/11/bits/shared_ptr.h:409 (raftkv_raft_tests+0x179c9f)
+    #7 std::shared_ptr<std::mutex> std::allocate_shared<std::mutex, std::allocator<std::mutex>>(std::allocator<std::mutex> const&) /usr/include/c++/11/bits/shared_ptr.h:863 (raftkv_raft_tests+0x179c9f)
+    #8 std::shared_ptr<std::mutex> std::make_shared<std::mutex>() /usr/include/c++/11/bits/shared_ptr.h:879 (raftkv_raft_tests+0x179c9f)
+    #9 std::_V2::condition_variable_any::condition_variable_any() /usr/include/c++/11/condition_variable:283 (raftkv_raft_tests+0x179c9f)
+    #10 raftkv::raft::RaftNode::RaftNode(raftkv::raft::RaftConfig, raftkv::raft::LogStore&, raftkv::raft::StateMachine&, raftkv::raft::Transport&, raftkv::raft::Clock&, raftkv::raft::SnapshotStore*, raftkv::raft::ClusterConfig const&, raftkv::raft::Metrics*) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:49 (raftkv_raft_tests+0x179c9f)
+    #11 RaftPerf_A16_NextFlushWaitsForInFlightSends_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1197 (raftkv_raft_tests+0x11dacd)
+    #12 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #13 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+  Mutex M949268930118058384 is already destroyed.
+
+SUMMARY: ThreadSanitizer: double lock of a mutex /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+==================
+WARNING: ThreadSanitizer: lock-order-inversion (potential deadlock) (pid=335616)
+  Cycle in lock order graph: M888757238963885840 (0x000000000000) => M949268930118058384 (0x000000000000) => M888757238963885840
+
+  Mutex M949268930118058384 acquired here while holding mutex M888757238963885840 in main thread:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x170dcc)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x170dcc)
+    #3 std::lock_guard<std::mutex>::lock_guard(std::mutex&) /usr/include/c++/11/bits/std_mutex.h:229 (raftkv_raft_tests+0x170dcc)
+    #4 std::_V2::condition_variable_any::notify_all() /usr/include/c++/11/condition_variable:299 (raftkv_raft_tests+0x170dcc)
+    #5 raftkv::raft::RaftNode::becomeLeader() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:164 (raftkv_raft_tests+0x170dcc)
+    #6 raftkv::raft::RaftNode::onRequestVoteReply(int, raftkv::raft::RequestVoteReply const&) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:638 (raftkv_raft_tests+0x171559)
+    #7 operator() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:418 (raftkv_raft_tests+0x17160a)
+    #8 __invoke_impl<void, raftkv::raft::RaftNode::tick()::<lambda(const raftkv::raft::RequestVoteReply&)>&, const raftkv::raft::RequestVoteReply&> /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x17160a)
+    #9 __invoke_r<void, raftkv::raft::RaftNode::tick()::<lambda(const raftkv::raft::RequestVoteReply&)>&, const raftkv::raft::RequestVoteReply&> /usr/include/c++/11/bits/invoke.h:111 (raftkv_raft_tests+0x17160a)
+    #10 _M_invoke /usr/include/c++/11/bits/std_function.h:290 (raftkv_raft_tests+0x17160a)
+    #11 std::function<void (raftkv::raft::RequestVoteReply const&)>::operator()(raftkv::raft::RequestVoteReply const&) const /usr/include/c++/11/bits/std_function.h:590 (raftkv_raft_tests+0x164015)
+    #12 raftkv::raft::MemoryTransport::sendRequestVote(int, raftkv::raft::RequestVoteArgs const&, std::function<void (raftkv::raft::RequestVoteReply const&)>) /home/tengyujie/raft-kv-lsm/src/raft/memory_adapters.cpp:160 (raftkv_raft_tests+0x164015)
+    #13 raftkv::raft::RaftNode::tick() /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:415 (raftkv_raft_tests+0x17cfd1)
+    #14 RaftPerf_A16_NextFlushWaitsForInFlightSends_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1214 (raftkv_raft_tests+0x11e085)
+    #15 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #16 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+    Hint: use TSAN_OPTIONS=second_deadlock_stack=1 to get more informative warning message
+
+  Mutex M888757238963885840 acquired here while holding mutex M949268930118058384 in thread T260:
+    #0 pthread_mutex_lock ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:4240 (libtsan.so.0+0x53908)
+    #1 __gthread_mutex_lock /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 (raftkv_raft_tests+0x185347)
+    #2 std::mutex::lock() /usr/include/c++/11/bits/std_mutex.h:100 (raftkv_raft_tests+0x185347)
+    #3 raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0>::lock() /home/tengyujie/raft-kv-lsm/src/raft/lock_probe.h:95 (raftkv_raft_tests+0x185347)
+    #4 std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >::lock() /usr/include/c++/11/bits/unique_lock.h:139 (raftkv_raft_tests+0x185347)
+    #5 std::_V2::condition_variable_any::_Unlock<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> > >::~_Unlock() /usr/include/c++/11/condition_variable:272 (raftkv_raft_tests+0x185347)
+    #6 std::cv_status std::_V2::condition_variable_any::wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >(std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >&, std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&) /usr/include/c++/11/condition_variable:337 (raftkv_raft_tests+0x185347)
+    #7 wait_until<std::unique_lock<raftkv::raft::ProbedMutexT<(raftkv::raft::LockClass)0> >, std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1, 1000000000> >, raftkv::raft::RaftNode::awaitCommit(raftkv::raft::Index, raftkv::raft::Term, uint64_t)::<lambda()> > /usr/include/c++/11/condition_variable:347 (raftkv_raft_tests+0x17f39f)
+    #8 raftkv::raft::RaftNode::awaitCommit(unsigned long, unsigned long, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:895 (raftkv_raft_tests+0x17f39f)
+    #9 raftkv::raft::RaftNode::propose(raftkv::raft::ClientRequest const&, unsigned long) /home/tengyujie/raft-kv-lsm/src/raft/raft_node.cpp:739 (raftkv_raft_tests+0x180176)
+    #10 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1234 (raftkv_raft_tests+0x10182d)
+    #11 __invoke_impl<void, RaftPerf_A16_NextFlushWaitsForInFlightSends_Test::TestBody()::<lambda(int)>::<lambda()> > /usr/include/c++/11/bits/invoke.h:61 (raftkv_raft_tests+0x10182d)
+    #12 __invoke<RaftPerf_A16_NextFlushWaitsForInFlightSends_Test::TestBody()::<lambda(int)>::<lambda()> > /usr/include/c++/11/bits/invoke.h:96 (raftkv_raft_tests+0x10182d)
+    #13 _M_invoke<0> /usr/include/c++/11/bits/std_thread.h:259 (raftkv_raft_tests+0x10182d)
+    #14 operator() /usr/include/c++/11/bits/std_thread.h:266 (raftkv_raft_tests+0x10182d)
+    #15 _M_run /usr/include/c++/11/bits/std_thread.h:211 (raftkv_raft_tests+0x10182d)
+    #16 <null> <null> (libstdc++.so.6+0xdc252)
+
+  Thread T15 (tid=336075, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:969 (libtsan.so.0+0x605b8)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xdc328)
+    #2 operator() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1227 (raftkv_raft_tests+0x11e7d6)
+    #3 RaftPerf_A16_NextFlushWaitsForInFlightSends_Test::TestBody() /home/tengyujie/raft-kv-lsm/tests/raft_perf_test.cpp:1244 (raftkv_raft_tests+0x11e7d6)
+    #4 void testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) <null> (raftkv_raft_tests+0x202102)
+    #5 __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58 (libc.so.6+0x29d8f)
+
+SUMMARY: ThreadSanitizer: lock-order-inversion (potential deadlock) /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:749 in __gthread_mutex_lock
+==================
+[       OK ] RaftPerf.A16_NextFlushWaitsForInFlightSends (410 ms)
+[----------] 17 tests from RaftPerf (2963 ms total)
+
+[----------] 6 tests from RaftReactor
+[ RUN      ] RaftReactor.R1_SendReceivesReplyAsynchronously
+[       OK ] RaftReactor.R1_SendReceivesReplyAsynchronously (8 ms)
+[ RUN      ] RaftReactor.R6_FrameIsNotRetransmittedWhileAwaitingReply
+[       OK ] RaftReactor.R6_FrameIsNotRetransmittedWhileAwaitingReply (406 ms)
+[ RUN      ] RaftReactor.R2_TimeoutDropsCallback
+[       OK ] RaftReactor.R2_TimeoutDropsCallback (604 ms)
+[ RUN      ] RaftReactor.R3_RemovePeerDropsInflightCallback
+[       OK ] RaftReactor.R3_RemovePeerDropsInflightCallback (202 ms)
+[ RUN      ] RaftReactor.R4_SlowPeerDoesNotBlockOthers
+[       OK ] RaftReactor.R4_SlowPeerDoesNotBlockOthers (11 ms)
+[ RUN      ] RaftReactor.R5_StopDropsPendingCallbacks
+[       OK ] RaftReactor.R5_StopDropsPendingCallbacks (206 ms)
+[----------] 6 tests from RaftReactor (1441 ms total)
+
+[----------] 4 tests from RaftLogStoreDiff
+[ RUN      ] RaftLogStoreDiff.FixedEdgeSequence
+[       OK ] RaftLogStoreDiff.FixedEdgeSequence (77 ms)
+[ RUN      ] RaftLogStoreDiff.RandomFuzz4000Steps
+[       OK ] RaftLogStoreDiff.RandomFuzz4000Steps (3417 ms)
+[ RUN      ] RaftLogStoreDiff.SetBoundaryBackwardsMatchesFileLogStore
+[       OK ] RaftLogStoreDiff.SetBoundaryBackwardsMatchesFileLogStore (28 ms)
+[ RUN      ] RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction
+[two-compactions] lsm_flush_done=47 lsm_compaction_rounds=11 raft_compacts=24 last_included=9800 first=9801 last=10000
+[       OK ] RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction (3369 ms)
+[----------] 4 tests from RaftLogStoreDiff (6892 ms total)
+
+[----------] Global test environment tear-down
+[==========] 161 tests from 24 test suites ran. (465369 ms total)
+[  PASSED  ] 161 tests.
+ThreadSanitizer: reported 16 warnings

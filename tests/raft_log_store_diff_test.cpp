@@ -340,10 +340,12 @@ TEST(RaftLogStoreDiff, RaftPrefixCompactionUnderLsmBackgroundCompaction) {
     EXPECT_GT(lsmRounds, 0u) << "lsm background compaction never ran: " << frag;
     EXPECT_GT(compactCalls, 0) << "raft prefix compaction never ran";
     EXPECT_GT(B.stats().compacts, 0u) << "raft prefix compaction never ran";
+    // M6.10.5(4) 证据自足：把"结论数字"打成**已求值**的一行，而不是只靠 EXPECT 的静默通过
+    // （断言成功时不打印任何东西，外部无法从原始日志复核"跨引擎 mismatches=0"）。
     std::fprintf(stderr,
-                 "[two-compactions] lsm_flush_done=%llu lsm_compaction_rounds=%llu "
-                 "raft_compacts=%llu last_included=%llu first=%llu last=%llu\n",
-                 (unsigned long long)lsmFlushes, (unsigned long long)lsmRounds,
+                 "[two-compactions] cross_engine_mismatches=%d steps=%d lsm_flush_done=%llu "
+                 "lsm_compaction_rounds=%llu raft_compacts=%llu last_included=%llu first=%llu last=%llu\n",
+                 mismatches, step, (unsigned long long)lsmFlushes, (unsigned long long)lsmRounds,
                  (unsigned long long)B.stats().compacts,
                  (unsigned long long)B.lastIncludedIndex(),
                  (unsigned long long)B.firstIndex(), (unsigned long long)B.lastIndex());
@@ -364,7 +366,12 @@ TEST(RaftLogStoreDiff, RaftPrefixCompactionUnderLsmBackgroundCompaction) {
   Index rli = kNoIndex;
   ASSERT_TRUE(B2.load(rt, rv, rli)) << "load() refused after a clean compact+sync";
   EXPECT_EQ(rli, A.lastIndex());
-  EXPECT_EQ(dump(A), dump(B2)) << "reopen diverged after two compactions";
+  const std::string pre_dump = dump(A);
+  const std::string post_dump = dump(B2);
+  EXPECT_EQ(pre_dump, post_dump) << "reopen diverged after two compactions";
+  // 同样把结论打成已求值的一行（供原始日志复核）。
+  std::fprintf(stderr, "[two-compactions] reopen_dump_equal=%d reopened_last=%llu\n",
+               (int)(pre_dump == post_dump), (unsigned long long)rli);
   EXPECT_EQ(B2.termAt(1), kNoTerm) << "compacted prefix resurrected after reopen";
   EXPECT_EQ(B2.lastIncludedIndex(), A.lastIncludedIndex());
   EXPECT_EQ(B2.firstIndex(), A.firstIndex());

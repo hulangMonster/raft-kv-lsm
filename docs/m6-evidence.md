@@ -1308,3 +1308,38 @@ TSan 161 = 165 − 4：`LsmCrash.*` 的 2 个 + `LsmApplyReopen.*` 的 2 个 for
 - **RSS 未降**（读侧镜像，N-D）；**SM fsync 未并入 group commit**。
 - **M6.7 的 A/B 数字**仍是当时机器状态下的（`docs/m6-bench.md` 已注明 loadavg 4.7–15.9 的污染）；
   本轮三臂 A/B 是安静机器上的复测。
+
+### 证据自检：一次「未求值模板」事故与防复发
+
+**事故**：第一版 `docs/raw/m6.10.5-final-acceptance.log` 落盘的是**未展开的模板**
+（例如 `rel_build_rc=0 warn$(grep -c warning: ...)`），而真实结果留在 `/tmp/final-accept.log` ——
+`/tmp` 一重启就没了，证据等于**不可复核**。
+
+**根因（就是那个引号）**：那份汇总是在一条 `ssh host '...'` 的**单引号参数**里用 `echo` 拼出来的，
+而那里为了"防止本地展开"写成了 `\$(grep -c ...)`。但**单引号参数本来就不做任何展开** ⇒ 远端 bash 收到的是
+`\$(...)`；而 `echo "...\$(...)"` 的双引号里 `\$` 又还原成字面 `$` ⇒ 落盘即模板。
+**规则**：要**求值**就直接写 `$(...)`，不要加反斜杠；要写**不求值的原文**就用引号包住。
+
+**修复**：
+
+- 汇总改由入库脚本 `scripts/collect_m6105_evidence.sh` 生成（`$(...)` 原样书写、真正求值），
+  并把**分阶段原始日志**一并复制进 `docs/raw/m6.10.5-final-*.log`（16 个，含 118 KB 的 TSan 无抑制日志、
+  驱动 stdout `-driver.log`、cmake/build/测试/gate/kill9/e2e 各阶段）。
+- 脚本内置**自检卫兵**：生成的汇总文件若命中字面 `$(`，打印「证据含未展开变量 ⇒ 证据无效」并**非零退出**。
+  卫兵**只管汇总**：拷贝进来的原始日志允许含 `$(` —— kill -9 的日志里有 bash 作业控制回显的脚本文本
+  `"$(port $id)"`，那是真实内容而不是模板；脚本对它们只**报告计数**。
+- 新增只读体检器 `scripts/check_m6105_evidence.py`（两关：未展开变量 + 结论数字必须已求值），可随时复跑。
+
+**体检结果**：`RESULT: OK` ——
+
+- **含未展开 `$(` 的证据文件 = 0**（21 个文件；`m6.10.5-final-kill9.log` 的 3 行在**白名单**内，是 bash 回显的脚本文本）。
+  `m6.10.5-e2e-before.sh` 是**修前脚本快照**，其中的 `$(...)` 是源码而不是输出，故检查器排除 `*.sh`。
+- 5 个证据文件的「结论数字」全部能在文件里找到**已求值**的行（`problems=0`）。
+
+**顺带补强的自足性**：② 的 store 级用例原来只靠 `EXPECT_EQ(mismatches, 0)` 的**静默通过** ——
+断言成功时 gtest 不打印任何东西，原始日志里没有可复核的数字。现在把结论打成已求值的一行：
+
+```
+[two-compactions] cross_engine_mismatches=0 steps=49 lsm_flush_done=47 lsm_compaction_rounds=11 raft_compacts=24 last_included=9800 first=9801 last=10000
+[two-compactions] reopen_dump_equal=1 reopened_last=10000
+```

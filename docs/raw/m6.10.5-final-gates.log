@@ -1,0 +1,29 @@
+START 2026年 10月 02日 星期五 21:31:54 CST
+### PHASE A: --log-engine lsm --state-engine lsm
+e2e round 1 PASS
+e2e round 2 PASS
+e2e round 3 PASS
+e2e round 4 PASS
+e2e round 5 PASS
+e2e round 6 PASS
+e2e round 7 PASS
+e2e round 8 PASS
+e2e round 9 PASS
+e2e round 10 PASS
+raft_fault rc=0
+raft_fault: PASS (10 iterations)
+raft_snapshot_fault rc=0
+raft_snapshot_fault: PASS
+raft_membership_fault rc=0
+raft_membership_fault: PASS (10 iterations)
+### PHASE B: --log-engine lsm --state-engine mem (2 rounds)
+mem e2e round 1 PASS
+mem e2e round 2 PASS
+mem raft_fault rc=0
+raft_fault: PASS (2 iterations)
+mem snapshot rc=0
+raft_snapshot_fault: PASS
+mem membership rc=0
+raft_membership_fault: PASS (2 iterations)
+FAIL_SUM=0
+END 2026年 10月 02日 星期五 21:36:24 CST

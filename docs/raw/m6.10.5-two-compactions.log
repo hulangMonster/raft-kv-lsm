@@ -1,27 +1,28 @@
-# M6.10.5 (2) 两套 compact 交互：store 级跨引擎对照用例
-# command: ./build/bin/raftkv_raft_tests --gtest_filter=RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction
+# M6.10.5 (2) 两套 compact 交互：store 级跨引擎对照用例 + 集群驱动
+# 用例: ./build/bin/raftkv_raft_tests --gtest_filter=RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction
+# （[two-compactions] 行是**已求值**的结论数字，供外部复核；断言成功本身不打印任何东西）
 
 Note: Google Test filter = RaftLogStoreDiff.*
 [==========] Running 4 tests from 1 test suite.
 [----------] Global test environment set-up.
 [----------] 4 tests from RaftLogStoreDiff
 [ RUN      ] RaftLogStoreDiff.FixedEdgeSequence
-[       OK ] RaftLogStoreDiff.FixedEdgeSequence (69 ms)
+[       OK ] RaftLogStoreDiff.FixedEdgeSequence (44 ms)
 [ RUN      ] RaftLogStoreDiff.RandomFuzz4000Steps
-[       OK ] RaftLogStoreDiff.RandomFuzz4000Steps (2774 ms)
+[       OK ] RaftLogStoreDiff.RandomFuzz4000Steps (1555 ms)
 [ RUN      ] RaftLogStoreDiff.SetBoundaryBackwardsMatchesFileLogStore
-[       OK ] RaftLogStoreDiff.SetBoundaryBackwardsMatchesFileLogStore (27 ms)
+[       OK ] RaftLogStoreDiff.SetBoundaryBackwardsMatchesFileLogStore (8 ms)
 [ RUN      ] RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction
-[two-compactions] lsm_flush_done=47 lsm_compaction_rounds=11 raft_compacts=24 last_included=9800 first=9801 last=10000
-[       OK ] RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction (776 ms)
-[----------] 4 tests from RaftLogStoreDiff (3649 ms total)
+[two-compactions] cross_engine_mismatches=0 steps=49 lsm_flush_done=47 lsm_compaction_rounds=11 raft_compacts=24 last_included=9800 first=9801 last=10000
+[two-compactions] reopen_dump_equal=1 reopened_last=10000
+[       OK ] RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBackgroundCompaction (432 ms)
+[----------] 4 tests from RaftLogStoreDiff (2041 ms total)
 
 [----------] Global test environment tear-down
-[==========] 4 tests from 1 test suite ran. (3649 ms total)
+[==========] 4 tests from 1 test suite ran. (2041 ms total)
 [  PASSED  ] 4 tests.
 
-# cluster-level driver (scripts/raft_two_compactions.sh --rounds 6):
-# raft 前缀压缩（周期快照 + log_.compact()）× lsm 后台 compaction（memtable 64 KiB）
+# 集群驱动 scripts/raft_two_compactions.sh --rounds 6（64 KiB memtable 逼出后台 compaction）:
 # two-compactions probe bin=/home/tengyujie/raft-kv-lsm/build/bin rounds=6 n=20000 pipeline=64 threshold=1000 write_buffer_bytes=65536
 # 2026-10-02T19:57:28+08:00 uname=Linux 6.8.0-138-generic nproc=8 load=2.63
 # leader node=3

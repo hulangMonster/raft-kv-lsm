@@ -1,0 +1,18 @@
+Consolidate compiler generated dependencies of target raftkv_core
+Consolidate compiler generated dependencies of target lsm
+[  5%] Built target raftkv_core
+[ 35%] Built target lsm
+Consolidate compiler generated dependencies of target raftkv_server
+Consolidate compiler generated dependencies of target raftkv_cli
+Consolidate compiler generated dependencies of target raftkv_tests
+[ 39%] Built target raftkv_server
+[ 45%] Built target raftkv_tests
+[ 49%] Built target raftkv_cli
+Consolidate compiler generated dependencies of target raftkv_raft
+[ 71%] Built target raftkv_raft
+Consolidate compiler generated dependencies of target raftkv_raft_node
+Consolidate compiler generated dependencies of target raftkv_raft_cli
+[ 75%] Built target raftkv_raft_node
+[ 77%] Built target raftkv_raft_cli
+Consolidate compiler generated dependencies of target raftkv_raft_tests
+[100%] Built target raftkv_raft_tests

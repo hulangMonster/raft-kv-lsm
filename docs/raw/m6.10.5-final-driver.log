@@ -1,27 +1,22 @@
-# M6.10.5 (4) 最终树收尾验收 —— 汇总（每条都是已求值的结果行）
-# 最终树 = raft-kv-lsm @ 29ea02a + lsm pin /tmp/lsm-pin-51c4672
-#   lsm 仓另有事后 tests-only 提交 0361e48；引擎代码与 51c4672 逐字节相同，故门禁与 A/B 口径不变。
-# 生成时间: 2026-10-02T21:49:36+08:00
-# 分阶段原始日志: m6.10.5-final-*.log（同目录）
-
-## Release 干净重建
+=== [1/5] Release 干净重建 ===
 rel_build_rc=0 warn=0 err=0
+rel_rc=0
 [  PASSED  ] 165 tests.
-raftkv_tests(M1): all tests passed (13)
-
-## ASan 全量
-asan_rc=0 reports=0 warn=0
+rel_m1_rc=0
+all tests passed (13)
+=== [2/5] ASan ===
+asan_build_rc=0 warn=0
+asan_rc=0 reports=0
 [  PASSED  ] 165 tests.
-
-## TSan 双口径
-canonical: rc=0 warn=0 race=0
+=== [3/5] TSan 双口径 ===
+tsan_build_rc=0 warn=0
+canon_rc=0 warn=0 race=0
 [  PASSED  ] 161 tests.
-no-supp:   rc=66 warn=16 race=0
-      8 double lock of a mutex (pid=335616)
-      8 lock-order-inversion (potential deadlock) (pid=335616)
+nosupp_rc=66 warn=16 race=0
 [  PASSED  ] 161 tests.
-
-## 四门禁（仓库脚本原样 lsm/lsm 10 轮）+ kill -9
+=== [4/5] 四门禁（仓库脚本原样 lsm/lsm 10 轮 + PHASE B）+ kill -9 ===
+build_rc=0 warn=0
+gates_rc=0
 e2e round 1 PASS
 e2e round 2 PASS
 e2e round 3 PASS
@@ -32,15 +27,22 @@ e2e round 7 PASS
 e2e round 8 PASS
 e2e round 9 PASS
 e2e round 10 PASS
+raft_fault rc=0
+raft_snapshot_fault rc=0
+raft_membership_fault rc=0
 ### PHASE B: --log-engine lsm --state-engine mem (2 rounds)
 mem e2e round 1 PASS
 mem e2e round 2 PASS
+mem raft_fault rc=0
+mem snapshot rc=0
+mem membership rc=0
 FAIL_SUM=0
+kill9_rc=0
 before kill -9: verify missing 0 OK (leader=3)
 after kill -9: verify missing 0 OK (new leader=2)
 kill9_verify: PASS
-
-## raft_e2e 照原样 10 轮（逐轮、不 break）
+=== [5/5] raft_e2e 照原样 10 轮（逐轮，不 break）===
+e2e10_rc=0
 E2E lsm/lsm round 1 rc=0 PASS
 E2E lsm/lsm round 2 rc=0 PASS
 E2E lsm/lsm round 3 rc=0 PASS
