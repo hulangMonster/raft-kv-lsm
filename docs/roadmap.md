@@ -130,11 +130,12 @@
 
 ## M6.9 状态机数据落到 LSM（**已交付**）
 
-- ✅ `LsmKvStateMachine` + 共享载荷编解码 `src/kv/kv_snapshot_view.h`；与 `KvStateMachine` 逐方法等价（M6.9.2 的 27 + M6.10.1 的 9 = 36 个新用例，mem/lsm 同组断言）
+- ✅ `LsmKvStateMachine` + 共享载荷编解码 `src/kv/kv_snapshot_view.h`；与 `KvStateMachine` 逐方法等价（M6.9.2 的 27 + M6.10.1 的 9 + N8 的 3 + apply-reopen 的 2 = 41 个新用例，mem/lsm 同组断言）
 - ✅ `--state-engine=mem|lsm`（默认 mem）；4 个门禁脚本透传 `--state-engine`
 - ✅ 原子性：一次 `apply` 的 数据+去重表+`lastApplied` = 一个 lsm `WriteBatch`；崩溃/重开一致；`restore` 原子
 - ✅ 门禁 `--log-engine lsm --state-engine lsm`：fault/snapshot/membership 各 10 轮**真 PASS**；`raft_e2e` 是**既有 harness flake**（三臂 8.3%/8.3%/16.7% 同量级，见 evidence §M6.9-2）；kill -9 -> `verify missing 0`
-- ✅ ASan 149/149 全绿 0 报告；TSan canonical 0 报告 / 无抑制 16 条（0 data race，与基线一致）；Release 干净重建 0 warning + 149/149 + M1 13/13
+- ✅ ASan 163/163 全绿 0 报告；TSan canonical 0 报告 / 无抑制 16 条（0 data race，与基线一致）；Release 干净重建 0 warning + 163/163 + M1 13/13（lsm 51c4672）
+- 🔒 **最终 lsm 基座 = `51c4672`**（`d62d8b3` flush/Close 竞态修复 + `51c4672` M5-C/M5-D 测量条件修正）；历次基座：`b1bd050` → `f06a44d` → `51c4672`
 - ✅ M6.10.1（B1）：restore 改双命名空间 + 值分块 + 单键指针提交（>64 MiB 载荷 / 超大单值可分块落盘；失败保旧、重入幂等）
 - ⛔ **阻塞（已上报）**：lsm 引擎 flush 与 Close/kill -9 竞态会留下孤儿 `*.sst`（无 MANIFEST）使 `DB::Open` Corruption；既有 `LsmLogStore` 同样受影响。端到端 reopen 验证待 lsm 修复后并入套件。证据 `docs/raw/m6.10.1-BLOCKER-lsm-flush-close.md`
 - ⬜ 未做：G6 掉电语义、G13 关闭期 leak/race（仅 ASan 生命周期）、RSS 未降（N-D）、SM fsync 未合并进 group commit、`raft_e2e.sh` 既有 flake 未修

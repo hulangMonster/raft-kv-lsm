@@ -1011,3 +1011,73 @@ TSan 147 = 149 − 2：两个 fork+`_exit` 崩溃用例在 `-fsanitize=thread` �
 | BLOCKER（M6.10.1） | lsm flush/Close 竞态留下孤儿 SST（无 MANIFEST），`DB::Open` Corruption；既有 `LsmLogStore` 同受影响。B1 端到端 reopen 验证被阻塞，未宣布通过 | `docs/raw/m6.10.1-BLOCKER-lsm-flush-close.md` |
 
 **未重跑（让路给 lsm 修复代理；新 sha 到位后统一补）**：N2/N6/N8/N9 的构建与用例、N1 stall 实测、N7 footprint 复标定，以及全部最终验收（Release 0 warning + 全量用例、ASan 全量、TSan 双口径、四脚本原样 ≥10 轮、kill -9 -> `verify missing 0`、`bench_m6_ab.sh` 三臂 A/B）。
+
+## M6.10 收口：B1 分块 restore 闭环、B2 证据更正、N1–N9、M5-C 归因
+
+**最终 lsm 基座 = `51c4672`**（`origin/main`；父 `d62d8b3`）。历次基座：`b1bd050`（M6.1–M6.6）→ `f06a44d`（M6.7–M6.9）→ `51c4672`（M6.10）。
+
+### 1) B1 —— restore 的分块原子替换（闭环）
+
+- 设计 §10.15；实现 `src/kv/lsm_kv_state_machine.{h,cpp}`：双命名空间（0x11/0x12）+ 值分块（内联 ≤1 MiB、块 ≤4 MiB）+ 单键指针提交；>64 MiB 载荷按 ≤4096 ops / ≤8 MiB 分批落盘，最后一个 `WriteBatch` 原子翻转 `ns`、写 `applied`、删 `pending`。
+- 中途发现 **lsm 引擎缺陷**（本仓外）：flush 与 Close/kill -9 竞态留下孤儿 `*.sst`（无 MANIFEST）⇒ `DB::Open` Corruption；既有 `LsmLogStore` 同样中招。原始证据 `docs/raw/m6.10.1-BLOCKER-lsm-flush-close.md`。
+- lsm 侧修复 `d62d8b3`（WAL-only 安全重建，仅 Open 恢复路径）→ re-pin `51c4672`。
+- **端到端闭环**：`LsmApplyReopen.LargeApplySurvivesReopen` / `LargeApplySurvivesKill9` **2/2 PASS**（`docs/raw/m6.10.4-apply-reopen-green.log`）；`LsmRestore.*` 9 项稳定通过。
+- 全量：**163/163**（`docs/raw/m6.10.4-full-suite.log`）。
+
+### 2) B2 —— 证据归属更正
+
+- `raft_e2e` 的 `9/10` 原被错记为 lsm/lsm 门禁结果；实为 **mem 状态机臂**结果，lsm/lsm 的 PHASE A 只跑了 2 轮 = 1 PASS / 1 FAIL（§M6.9-1 已改正）。
+- 三臂 flake 对照（§M6.9-2）：M6.9 之前原版 8.3% / 本仓 lsm/lsm 8.3% / 本仓 file/mem 16.7% ⇒ 既有 harness flake。
+- 本轮最终验收 lsm/lsm 四脚本 **10/10 全绿**（未撞上 flake）；`raft_e2e` 的失败机制仍是第 115 行 CLI `put` 返回 `NOT_LEADER` 且 `set -euo pipefail` 下 `out=$(...)` 直接中止（**未改判据、未静默重试**）。
+
+### 3) N1–N9 处置
+
+| 项 | 处置 | 位置 |
+|---|---|---|
+| N1 lsm 停顿实测 | 3 节点 log=lsm state=lsm：默认 4 MiB 缓冲下 200k 写入 **0 stall**；诊断旋钮 `RAFTKV_LSM_WRITE_BUFFER_BYTES=65536` 下 `stall_events` 6→19、`stall_ms` 12→40（有界），全程 `missing 0`。**tick() 延迟未直接插桩**，以客户端可见延迟为代理（登记为限制） | `docs/raw/m6.10.4-n1-stall.log`、`src/raft/lsm_log_store.cpp` |
+| N2 `setBoundary` 等价 | 已修：按 FileLogStore 语义重算 `lastIndex_`/`lastTerm_`（含 `lastIncluded_==kNoIndex ⇒ kNoTerm`），消除对空 `terms_` 的越界读；新增跨引擎对照用例 | `tests/raft_log_store_diff_test.cpp` |
+| N3 README 计数 | `121/121` → `163/163` | `README.md` |
+| N4 `BUILD_TESTING=OFF` + 固定基座 | **未改** lsm 子目录的 `BUILD_TESTING`（动构建接线，待裁决）；README 命令已写明 `-DRAFTKV_LSM_DIR=/tmp/lsm-pin-51c4672` 与 live-worktree 默认的风险 | `README.md` |
+| N5 codec 措辞 | 已改：mem 基线保留自己的 codec；两实现由逐字节/交叉 restore 测试钉住 | `src/kv/kv_snapshot_view.h` |
+| N6 shutdown sync | 已改：检查 `LsmKvStateMachine::sync()` 返回值并告警；`_Exit`/Close 的 durable 表述改为条件式 | `src/main_raft_node.cpp` |
+| N7 footprint 复标定 | 三基座 × 25k/50k/100k/200k 稳定点：`b1bd050` 2.05/3.94/4.04/**4.29 MB**、`f06a44d` 2.05/3.94/4.05/**4.34 MB**、`51c4672` 2.05/3.94/4.04/**4.34 MB** ⇒ 200k 稳定点超旧 4 MiB 判据且三基座一致（判据语义未变，仅按更保守稳定点重标定为 8 MiB） | `docs/raw/m6.10.4-footprint.log` |
+| N8 跨引擎差分测试 | 已入库：固定边界序列 + 4000 步随机 fuzz + N2 回归，两引擎同一 body 逐步比对 | `tests/raft_log_store_diff_test.cpp` |
+| N9a `stats().truncates` 口径 | 已修：只统计真的删除条目的 truncate（E4 no-op 不计） | `src/raft/lsm_log_store.{h,cpp}` |
+| N9b `RAFTK_HAVE_LSM` | 已登记：Lsm 孪生未包夹 ⇒ 未配置 lsm 的构建 fail-loud 而非 skip（有意） | `tests/raft_restart_test.cpp` |
+
+### 4) 最终验收原始输出（lsm `51c4672`）
+
+| 判据 | 结果 | 原始输出 |
+|---|---|---|
+| Release 干净重建 | **0 warning / 0 error；163/163；M1 13/13** | `docs/raw/m6.10.4-release.log` |
+| ASan 全量 | **163/163；0 ASan 报告；0 warning** | `docs/raw/m6.10.4-asan.log` |
+| TSan canonical（`tests/tsan.supp`） | **rc=0；0 warning；0 data race；159/159** | `docs/raw/m6.10.4-tsan.log` |
+| TSan 无抑制 | **rc=66；16 warning（8 double-lock + 8 lock-order-inversion）；0 data race** | 同上 |
+| TSan 窄面（新代码） | **rc=0；0 warning；0 data race** | 同上 |
+| 四脚本原样 lsm/lsm ≥10 轮 | `raft_e2e` 10/10、`raft_fault` 10/10、`raft_snapshot_fault` 10/10、`raft_membership_fault` 10/10；PHASE B（log=lsm state=mem）全 PASS；`FAIL_SUM=0` | `docs/raw/m6.10.4-gates-kill9.log` |
+| `kill -9 → verify missing 0` | 杀 leader 前后均 `missing 0` | 同上 |
+| 三臂 A/B | p=1 base114/file112/lsm121；p=8 662/676/686；p=64 2458/2438/2392 ⇒ **无回归** | `docs/raw/m6.10.4-bench-ab.log` |
+| N1 停顿 | 见 §3 | `docs/raw/m6.10.4-n1-stall.log` |
+| N7 footprint | 见 §3 | `docs/raw/m6.10.4-footprint.log` |
+
+TSan 159 = 163 − 4：`LsmCrash.*` 的 2 个与 `LsmApplyReopen.*` 的 2 个 fork+`_exit` 用例在 `__SANITIZE_THREAD__` 下编译排除，由 ASan/Release 两条腿覆盖。
+
+### 5) M5-C 归因（确定性 harness 测量条件，非机器抖动、非引擎修复）
+
+- 机制：门禁用 `--dataset 20000 --warmup 1000`，旧预热 1000 ≪ calls=20000 ⇒ 写负载第一次 measured repeat 含大量**首次插入**（`raw1≈11us`），第二次是**全覆盖写**（`raw2≈28us`）⇒ 吞吐/P99 差异超 `--repro-tol` ⇒ `BENCH_REPRO_OK 0`、rc=1。
+- 修复在 **`bench/bench_lsm.cpp`**（`51c4672`，+8/−2）：写负载预热改为 `max(p.warmup, calls)`，两次 measured repeat 从同一「全 key 已存在」初态出发。**`scripts/bench_lsm.sh` 未改，判据未改**（未放宽阈值/减轮次/加重试）。
+- 交替对照（`/tmp/lsm-pristine` = `f06a44d` vs `/tmp/lsm-pin-51c4672`，各 6 次**交替**，命令与门禁 M5-C 腿逐字一致）：
+  - **pristine 6/6 `rc=1`**，写格 `repro_ok=0`（`seq_write` 11/28、`rand_write` 13-14/32-33），读格 `repro_ok=1`；
+  - **fixed 6/6 `rc=0`**，四个 lsm 格 `repro_ok=1`（28/28、32/32、18/18、20/20）。
+  ⇒ 差异是**确定性**的（同一二进制逐次复现同样的 raw1/raw2），不是机器状态抖动。
+- 残余：第一轮系列里 fixed 曾出现 1 次 `seq_read` 格的吞吐/P99 越界（`rc=1`，但该格 `raw1==raw2`），其后 6 轮未复现；`d62d8b3`/`51c4672` 都**没有碰读路径**，故属低概率测量离群，不足以归因给本次修复。
+- 原始输出：`docs/raw/m6.10.4-m5c-attribution.log`。
+
+### 6) 仍未做 / 未验证
+
+- **N4**：未给 lsm 子目录传 `BUILD_TESTING=OFF`（会动构建接线，待裁决）；README 已钉住 `-DRAFTKV_LSM_DIR` 并写明 live-worktree 默认的风险。
+- **N1 的 tick() 延迟**：未直接插桩（用客户端可见延迟代理）。
+- **G6 掉电语义 / G13 关闭期 leak+race**：仍只有 ASan 生命周期与「`_Exit` 跳过 LSan」的说明；TSan 不跨进程。
+- **RSS 未降**（读侧镜像，N-D）；**SM fsync 未合并进 group commit**。
+- **`raft_e2e.sh` 既有 flake 未修**（超出范围，按纪律原样登记）。
+- **M6.7 的 A/B 数字**仍是当时机器状态下的（`docs/m6-bench.md` 已注明 loadavg 4.7–15.9 的污染）；本轮三臂 A/B 是安静机器上的复测。

@@ -16,6 +16,7 @@ Linux 6.8.0-138-generic
 ```
 - 三个臂都是**同机、同轮、交替**测量（`base → file → lsm` 每 rep 一轮），每格 = 3 次取中位数。
 - lsm 基座：`~/lsm-kv @ b1bd050`（`git archive` pin 到 `/tmp/lsm-pin-b1bd050` 后链接）；
+  **最终基座（M6.10 收口）= `51c4672`**（父 `d62d8b3` = flush/Close 竞态修复；`51c4672` = M5-C/M5-D 测量条件修正）。历次：`b1bd050`（M6.1–M6.6）→ `f06a44d`（M6.7–M6.9）→ `51c4672`（M6.10）；
   base 臂 = `~/raft-kv/build/bin`（远端基线 `1463620`，未改动）。
 - 每格独立临时数据目录（`mktemp -d`），200 写预热丢弃，`fill` 后立即 `verify`。
 

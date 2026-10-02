@@ -32,7 +32,7 @@
 | 读代码 | ✅ | `lsm_log_store.{h,cpp}`、`log_entry_codec.h`、`log_store.h`、`raft_node.cpp`（只读）、`lock_probe.h`、`tests/*`、`scripts/*`、`CMakeLists.txt` |
 | `git diff` 对账 | ✅ | `git diff --stat 6aabc27..HEAD`、`git diff 6aabc27..HEAD -- <files>`、`git diff -U0 1463620..HEAD -- tests/` |
 | 读设计/证据文档 | ✅ | `docs/m6-design.md`、`docs/m6-evidence.md`、`docs/m6-bench.md`、`~/raft-kv/docs/m5-*.md` |
-| 读 lsm 侧 | ✅（只读） | `~/lsm-kv` 当前 HEAD `f06a44d`；M6 当初链接的 pin `b1bd050` **已随 /tmp 清空丢失**（见 §7） |
+| 读 lsm 侧 | ✅（只读） | 本轮复核时 HEAD `f06a44d`；M6 当初链接的 pin `b1bd050` 曾随 /tmp 清空丢失（见 §7）。**M6.10 收口时 `~/lsm-kv` HEAD = `51c4672`（= 最终 pin `/tmp/lsm-pin-51c4672`）** |
 | 构建 / 跑测试 / 跑 sanitizer / 跑基准 | ❌ | **本轮明确不跑**；因此所有“绿/通过/0 报告”都来自**当时写入 `m6-evidence.md`/`m6-bench.md` 的原文**，属转述证据 |
 | 读 `~/raft-kv`/`~/lsm-kv` 的 git | ✅（只读） | 未对两仓做任何 git 写操作 |
 
