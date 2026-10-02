@@ -19,9 +19,15 @@ namespace raftkv::raft {
 
 class Metrics {
  public:
-  // 分桶上界(us)：1,2,5,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,>=50ms
-  // 上报值是所在桶的上界；最后一个桶（>=50ms）按 50000 上报（下界估计）。
-  static constexpr size_t kBuckets = 16;
+  // 分桶上界(us)：1,2,5,10,20,50,100,200,500,1000,2000,5000,10000,20000,
+  //               50000,100000,200000,500000,1000000,>=1s
+  // 上报值是所在桶的上界；最后一个桶（>=1s）按 1000000 上报（下界估计）。
+  //
+  // M6.10.5 (5)：原来上界只到 50ms，而 M6 三臂 A/B 在 p=64 的写延迟普遍 >50ms，
+  // 于是 p50/p99 全部落在溢出桶、都上报 50000 —— 等于没有分辨率。这里把上界延伸到
+  // 1s，让 p50/p99 落在真实量级上；另加一个**真实最大值**计数器（lat_max_us /
+  // raftkv_write_latency_us_max），因为分桶永远只能给上界，最大值需要单独观测。
+  static constexpr size_t kBuckets = 20;
 
   // ---- 写路径 ----
   void onWriteCompleted(uint64_t latencyUs);  // 客户端写提交完成（端到端延迟）
@@ -62,6 +68,7 @@ class Metrics {
   uint64_t lockWaitUsMax() const;
   uint64_t latencyP50Us() const;
   uint64_t latencyP99Us() const;
+  uint64_t latencyMaxUs() const;  // M6.10.5 (5)：真实最大值（不受分桶分辨率限制）
   uint64_t qps() const;
 
  private:
@@ -86,6 +93,7 @@ class Metrics {
   std::atomic<uint64_t> windowStartUs_{0};
   std::atomic<uint64_t> windowWrites_{0};
   std::atomic<uint64_t> latencyBuckets_[kBuckets] = {};
+  std::atomic<uint64_t> latencyMaxUs_{0};  // M6.10.5 (5)
 };
 
 }  // namespace raftkv::raft

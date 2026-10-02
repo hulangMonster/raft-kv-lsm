@@ -1179,3 +1179,39 @@ store 级用例 `--gtest_filter=RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBac
 
 **结论**：该 flake 是**负载敏感**的领导权窗口竞态（静默机器 100 轮也复现不出）；补丁只在该窗口内做
 有界重试，不放宽任何判据。原始输出：`docs/raw/m6.10.5-e2e-probe.log`。
+
+### M6.10.5 加固（5）写延迟直方图：上界 50ms → 1s + 真实最大值
+
+**问题**：node 侧直方图的桶上界原本止于 50ms，且最后一个桶（`>=50ms`）按 `kOverflowReportUs = 50000`
+上报（下界估计）。M6 三臂 A/B 在 p=64 的写延迟普遍到几十毫秒，于是 **p50/p99 全部被压成同一个 50000** ——
+`lat_p99_us=50000` 既可能是 51ms 也可能是 5s，等于没有分辨率。改动只在**本副本**
+（`src/raft/metrics.{h,cpp}`）；`~/raft-kv` 未动，所以三臂里的 **base 臂仍然只有旧字段**
+（`lat_max_us=NA`）—— 这本身就是"我们没改基线"的正向证据。
+
+**改动**：
+- `kBuckets` 16 → 20，桶上界延伸为 `…20000, 50000, 100000, 200000, 500000, 1000000, +inf`；
+  溢出桶按其下界 `1000000` 上报。`class Metrics` 的注释与 `kBounds` 同步更新。
+- 新增**真实最大值**计数器 `lat_max_us`（`statusFragment()`）与 `raftkv_write_latency_us_max`
+  （`prometheusText()`）。C++17 的 `std::atomic` 没有 `fetch_max`，用 CAS 循环实现（热路径通常一次 load 就返回）。
+- `scripts/bench_m6_ab.sh` 按它自己的"前缀列冻结、只允许行尾追加"契约，在行尾追加 `lat_max_us=`。
+
+**逐点对照（同一份数据喂给两套桶）**：单测 `RaftPerf.M6105_LatencyUpperBoundAndMax` 断言
+60ms 的样本在**新**桶里落到 `100000` 那一档、`latencyMaxUs() == 60000`（不被分桶取整）；
+750ms 的样本落到 `1000000` 档；同时保留 `{120, 20000}` 的既有分辨率断言（未削弱任何旧断言）。
+旧实现下 60ms 会落进 `>=50ms` 的溢出桶并上报 `50000`（旧 `kBounds` 末项 `UINT64_MAX` + `kOverflowReportUs = 50000`）。
+
+**三臂 A/B 原始行**（同一命令 `scripts/bench_m6_ab.sh --repeats 3 --only base,file,lsm`；
+旧行保留在 `docs/raw/m6.10.4-bench-ab.log`，未删改；新行 + 逐 (arm,pipeline) 中位对照在
+`docs/raw/m6.10.5-bench-ab-p99max.log`）：
+
+| 版本 | 出现的 (p50,p99) 组合（file+lsm，18 行） | 能否看到真实尾部 |
+|---|---|---|
+| 旧（16 桶，顶桶 50ms） | `(10000,20000)`×6、`(20000,50000)`×7、`(50000,50000)`×5 | **不能**：p99 永远 ≤50000，且 `50000` 是下界估计 |
+| 新（20 桶，顶桶 1s）| 同上 + `(20000,20000)`×2；另新增 `lat_max_us` | **能**：`lat_max_us` 实测 14992 … **82950** us |
+
+**诚实的限度**：在 p=64 的这份负载下，真实 p50/p99 本来就落在 20–50ms 之间，所以
+**p50/p99 的数值经常与旧行相同** —— 这不是"改动没生效"，而是"旧的 50000 是溢出桶下界、新的 50000 是
+真正的 ≤50ms 桶上界"。本次改动的实际增量是两条：(a) p99 不再被溢出桶强行钉在 50000（现在可以报到 1s），
+(b) `lat_max_us` 把旧实现抹平成单一 50000 的 15–83ms 尾部暴露出来。
+
+**复跑**：`scripts/bench_m6_ab.sh --repeats 3 --only base,file,lsm`。

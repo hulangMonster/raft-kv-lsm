@@ -9,12 +9,15 @@
 namespace raftkv::raft {
 
 namespace {
-// 分桶上界（us）：1,2,5,10,20,50,100,200,500,1000,+inf
+// 分桶上界（us）：1,2,5,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,
+//                 100000,200000,500000,1000000,+inf
+// M6.10.5 (5)：上界从 50ms 延伸到 1s（原实现下 M6 三臂的 p50/p99 全部挤在溢出桶）。
 constexpr uint64_t kBounds[Metrics::kBuckets] = {
-    1,     2,     5,     10,    20,    50,     100,    200,
-    500,   1000,  2000,  5000,  10000, 20000,  50000,  UINT64_MAX};
-// 溢出桶（>=50ms）按 50000 上报（下界估计）；其余桶上报自身上界。
-constexpr uint64_t kOverflowReportUs = 50000;
+    1,      2,      5,       10,      20,      50,      100,    200,
+    500,    1000,   2000,    5000,    10000,   20000,   50000,  100000,
+    200000, 500000, 1000000, UINT64_MAX};
+// 溢出桶（>=1s）按其下界上报（下界估计）；其余桶上报自身上界。
+constexpr uint64_t kOverflowReportUs = 1000000;
 }  // namespace
 
 void Metrics::onWriteCompleted(uint64_t latencyUs) {
@@ -22,6 +25,14 @@ void Metrics::onWriteCompleted(uint64_t latencyUs) {
   size_t b = 0;
   while (b + 1 < kBuckets && latencyUs > kBounds[b]) ++b;
   latencyBuckets_[b].fetch_add(1, std::memory_order_relaxed);
+
+  // M6.10.5 (5)：真实最大值。C++17 的 atomic 没有 fetch_max，用 CAS 循环；
+  // 只在观测到更大的值时才写，热路径上通常一次 load 就返回。
+  uint64_t seen = latencyMaxUs_.load(std::memory_order_relaxed);
+  while (latencyUs > seen &&
+         !latencyMaxUs_.compare_exchange_weak(seen, latencyUs,
+                                              std::memory_order_relaxed)) {
+  }
 
   // qps 窗口：>1s 没有新写就重新起窗（近似即可，指标不参与判定）
   const uint64_t now = lockprobe::nowUs();
@@ -132,6 +143,9 @@ uint64_t Metrics::percentileUs(double p) const {
 
 uint64_t Metrics::latencyP50Us() const { return percentileUs(0.50); }
 uint64_t Metrics::latencyP99Us() const { return percentileUs(0.99); }
+uint64_t Metrics::latencyMaxUs() const {
+  return latencyMaxUs_.load(std::memory_order_relaxed);
+}
 
 uint64_t Metrics::qps() const {
   const uint64_t start = windowStartUs_.load(std::memory_order_relaxed);
@@ -155,12 +169,13 @@ std::string Metrics::statusFragment() const {
   char buf[640];
   std::snprintf(
       buf, sizeof(buf),
-      "qps=%llu lat_p50_us=%llu lat_p99_us=%llu fsync_calls=%llu fsync_ms=%llu "
+      "qps=%llu lat_p50_us=%llu lat_p99_us=%llu lat_max_us=%llu fsync_calls=%llu fsync_ms=%llu "
       "batch_avg=%llu batch_max=%llu repl_lag_max=%llu elections_total=%llu "
       "snapshots_total=%llu snapshot_bytes=%llu config_changes=%llu "
       "lock_wait_us_total=%llu lock_wait_max=%llu inflight_rpc=%llu",
       (unsigned long long)qps(), (unsigned long long)latencyP50Us(),
       (unsigned long long)latencyP99Us(),
+      (unsigned long long)latencyMaxUs(),
       (unsigned long long)fsyncCalls_.load(std::memory_order_relaxed),
       (unsigned long long)(fsyncUs_.load(std::memory_order_relaxed) / 1000ULL),
       (unsigned long long)(batches == 0 ? 0 : entries / batches),
@@ -185,6 +200,7 @@ std::string Metrics::prometheusText() const {
          std::to_string(latencyP50Us()) + "\n";
   out += "raftkv_write_latency_us{quantile=\"0.99\"} " +
          std::to_string(latencyP99Us()) + "\n";
+  out += "raftkv_write_latency_us_max " + std::to_string(latencyMaxUs()) + "\n";
   out += "# TYPE raftkv_fsync_total counter\n";
   out += "raftkv_fsync_total " + std::to_string(fsyncCalls()) + "\n";
   out += "raftkv_fsync_ms_total " + std::to_string(fsyncUs() / 1000ULL) + "\n";

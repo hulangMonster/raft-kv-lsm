@@ -321,6 +321,33 @@ TEST(RaftPerf, A6_MetricsCountersAndStatusFragment) {
   EXPECT_NE(frag.find("batch_max="), std::string::npos) << frag;
 }
 
+// M6.10.5 (5)：把写延迟直方图的上界从 50ms 延伸到 1s，并加真实最大值计数器。
+//
+// 反事实自检：改动前 60ms 的样本会落进 ">=50ms" 的溢出桶，p50/p99 一律上报 50000，
+// 于是 M6 三臂 A/B 的 p50/p99 全都一模一样（等于没有分辨率）。现在它必须落在 100000
+// 那一档，并且最大值必须是**不被分桶取整**的 60000。两个断言一起才说明"既恢复了分辨率、
+// 又没有把最大值也变成桶上界"。
+TEST(RaftPerf, M6105_LatencyUpperBoundAndMax) {
+  Metrics m;
+  m.onWriteCompleted(60000);  // 60ms：旧实现的 >=50ms 溢出桶
+  EXPECT_EQ(m.latencyMaxUs(), 60000u);   // 最大值不受分桶分辨率限制
+  EXPECT_EQ(m.latencyP50Us(), 100000u);  // 新桶上界（旧实现会报 50000）
+  EXPECT_EQ(m.latencyP99Us(), 100000u);
+
+  Metrics m2;
+  m2.onWriteCompleted(120);
+  m2.onWriteCompleted(20000);
+  m2.onWriteCompleted(750000);  // 750ms：落在 1000000 桶
+  EXPECT_EQ(m2.latencyMaxUs(), 750000u);
+  EXPECT_EQ(m2.latencyP50Us(), 20000u);    // 既有分辨率未被破坏
+  EXPECT_EQ(m2.latencyP99Us(), 1000000u);
+
+  const std::string frag = m2.statusFragment();
+  EXPECT_NE(frag.find("lat_max_us=750000"), std::string::npos) << frag;
+  const std::string prom = m2.prometheusText();
+  EXPECT_NE(prom.find("raftkv_write_latency_us_max 750000"), std::string::npos) << prom;
+}
+
 // M5.A8 [RED->GREEN] J4 纵深防御：陈旧/陌生候选者**不得抬高我们的任期**（否则被移除节点
 // 可以靠不停竞选把健康 Leader 逼下台）；而配置内成员的高任期请求仍然必须被采纳。
 TEST(RaftPerf, A8_NonMemberVoteRequestCannotBumpTerm) {
