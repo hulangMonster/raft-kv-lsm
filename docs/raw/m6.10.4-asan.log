@@ -1,0 +1,13 @@
+# M6.10.4 ASan full (build-asan reconfigured to lsm pin 51c4672)
+# command: cd build-asan && cmake -DRAFTKV_LSM_DIR=/tmp/lsm-pin-51c4672 .. && make -j8 && ASAN_OPTIONS=detect_leaks=1 ./bin/raftkv_raft_tests
+asan_build=0 warnings=0
+asan_rc=0
+[  PASSED  ] 163 tests.
+asan_reports=0
+PHASE_DONE asan
+# test summary:
+[==========] Running 163 tests from 24 test suites.
+[==========] 163 tests from 24 test suites ran. (94204 ms total)
+[  PASSED  ] 163 tests.
+# ASan error lines (expect none):
+0

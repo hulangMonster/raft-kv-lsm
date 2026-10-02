@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <limits>
 #include <stdexcept>
@@ -126,6 +127,13 @@ LsmLogStore::LsmLogStore(std::string dir) : dir_(std::move(dir)) {
                              ": " + ec.message());
   }
   lsm::Options opts;
+  // M6.10.4 N1 diagnostic knob: RAFTK_LSM_WRITE_BUFFER_BYTES overrides the
+  // memtable size to exercise the flush/stall path in a bounded measurement.
+  // Unset or <= 0 keeps the engine default (production behaviour unchanged).
+  if (const char* wb = ::getenv("RAFTKV_LSM_WRITE_BUFFER_BYTES")) {
+    const long long v = std::atoll(wb);
+    if (v > 0) opts.write_buffer_size = static_cast<size_t>(v);
+  }
   lsm::DB* raw = nullptr;
   const lsm::Status s = lsm::DB::Open(opts, sub, &raw);
   if (!s.ok()) {

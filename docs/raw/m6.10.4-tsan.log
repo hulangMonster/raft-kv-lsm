@@ -1,0 +1,29 @@
+# M6.10.4 TSan (build-tsan reconfigured to lsm pin 51c4672)
+# canonical: TSAN_OPTIONS=suppressions=tests/tsan.supp setarch $(uname -m) -R ./build-tsan/bin/raftkv_raft_tests
+# no-supp  : TSAN_OPTIONS=suppressions=/dev/null        setarch $(uname -m) -R ./build-tsan/bin/raftkv_raft_tests
+tsan_build=0 warnings=0
+tsan_canon_rc=0 warnings=0 races=0
+[  PASSED  ] 159 tests.
+tsan_nosupp_rc=66 warnings=16 races=0
+tsan_narrow_rc=0 warnings=0 races=0
+PHASE_DONE tsan
+
+# type counts (NO suppression):
+      8 double lock of a mutex (pid=185380)
+      8 lock-order-inversion (potential deadlock) (pid=185380)
+# type counts (WITH suppression): (none)
+
+## canonical summary:
+[==========] Running 159 tests from 24 test suites.
+[==========] 159 tests from 24 test suites ran. (433731 ms total)
+[  PASSED  ] 159 tests.
+## no-supp summary:
+[==========] Running 159 tests from 24 test suites.
+[==========] 159 tests from 24 test suites ran. (437480 ms total)
+[  PASSED  ] 159 tests.
+ThreadSanitizer: reported 16 warnings
+## narrow new-code summary:
+[==========] Running 37 tests from 6 test suites.
+[==========] 37 tests from 6 test suites ran. (395583 ms total)
+[  PASSED  ] 37 tests.
+# 163 - 159 = 4: fork+_exit tests compiled out under TSan (2 in LsmCrash, 2 in LsmApplyReopen).

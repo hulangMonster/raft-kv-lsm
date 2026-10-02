@@ -1,0 +1,4 @@
+# M6.10.4 full suite on the 51c4672 pin (build/)
+[==========] Running 163 tests from 24 test suites.
+[==========] 163 tests from 24 test suites ran. (64500 ms total)
+[  PASSED  ] 163 tests.

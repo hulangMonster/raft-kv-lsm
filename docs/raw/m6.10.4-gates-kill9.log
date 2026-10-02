@@ -1,0 +1,36 @@
+# M6.10.4 gates: 4 scripts AS-IS with --log-engine lsm --state-engine lsm, 10 rounds each (lsm pin 51c4672)
+# driver: /tmp/m6.9.3-gates.sh (PHASE A lsm/lsm 10 rounds; PHASE B log=lsm state=mem 2 rounds)
+START 2026年 10月 02日 星期五 17:50:06 CST
+### PHASE A: --log-engine lsm --state-engine lsm
+e2e round 1 PASS
+e2e round 2 PASS
+e2e round 3 PASS
+e2e round 4 PASS
+e2e round 5 PASS
+e2e round 6 PASS
+e2e round 7 PASS
+e2e round 8 PASS
+e2e round 9 PASS
+e2e round 10 PASS
+raft_fault rc=0
+raft_fault: PASS (10 iterations)
+raft_snapshot_fault rc=0
+raft_snapshot_fault: PASS
+raft_membership_fault rc=0
+raft_membership_fault: PASS (10 iterations)
+### PHASE B: --log-engine lsm --state-engine mem (2 rounds)
+mem e2e round 1 PASS
+mem e2e round 2 PASS
+mem raft_fault rc=0
+raft_fault: PASS (2 iterations)
+mem snapshot rc=0
+raft_snapshot_fault: PASS
+mem membership rc=0
+raft_membership_fault: PASS (2 iterations)
+FAIL_SUM=0
+END 2026年 10月 02日 星期五 17:54:44 CST
+
+# kill -9 -> verify missing 0
+before kill -9: verify missing 0 OK (leader=3)
+after kill -9: verify missing 0 OK (new leader=2)
+kill9_verify: PASS

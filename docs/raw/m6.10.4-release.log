@@ -1,0 +1,15 @@
+# M6.10.4 Release clean rebuild (fresh build-m610-release, lsm pin 51c4672)
+# command: rm -rf build-m610-release && cmake -S . -B build-m610-release -DCMAKE_BUILD_TYPE=Release -DRAFTKV_LSM_DIR=/tmp/lsm-pin-51c4672 && make -C build-m610-release -j8
+rel_cmake=0 rel_build=0 warnings=0 errors=0
+rel_raft_tests_rc=0
+[  PASSED  ] 163 tests.
+rel_m1_rc=0
+all tests passed (13)
+PHASE_DONE release
+# build warning/error lines (expect none):
+# raftkv_raft_tests:
+[==========] Running 163 tests from 24 test suites.
+[==========] 163 tests from 24 test suites ran. (63915 ms total)
+[  PASSED  ] 163 tests.
+# raftkv_tests (M1):
+all tests passed (13)

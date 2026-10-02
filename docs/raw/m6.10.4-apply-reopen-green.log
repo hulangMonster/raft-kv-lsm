@@ -1,0 +1,15 @@
+# M6.10.4 B1 end-to-end closure: apply-reopen regression on lsm 51c4672
+# command: ./build/bin/raftkv_raft_tests --gtest_filter='LsmApplyReopen.*'
+Note: Google Test filter = LsmApplyReopen.*
+[==========] Running 2 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 2 tests from LsmApplyReopen
+[ RUN      ] LsmApplyReopen.LargeApplySurvivesReopen
+[       OK ] LsmApplyReopen.LargeApplySurvivesReopen (676 ms)
+[ RUN      ] LsmApplyReopen.LargeApplySurvivesKill9
+[       OK ] LsmApplyReopen.LargeApplySurvivesKill9 (387 ms)
+[----------] 2 tests from LsmApplyReopen (1064 ms total)
+
+[----------] Global test environment tear-down
+[==========] 2 tests from 1 test suite ran. (1064 ms total)
+[  PASSED  ] 2 tests.

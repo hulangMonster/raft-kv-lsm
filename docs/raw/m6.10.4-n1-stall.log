@@ -1,0 +1,17 @@
+# M6.10.4 N1 stall probe (3 nodes, log=lsm state=lsm, threshold 2000, fill 50000 x4 p=64, lsm pin 51c4672)
+# NOTE: tick() latency is NOT directly instrumented; the bounded stall counters plus
+#       the client-visible latency in m6.10.4-bench-ab.log are the documented proxy.
+
+## A) production default write_buffer_size (4 MiB) — no stalls observed
+N1 cum_applied_target=50000 step=50000 verify50000=[missing 0] stall_events=0 stall_ms=0 flush_done=3 flush_failed=0 wal_rotations=3 wal_bytes=1031277 sst_bytes=2913117 compaction_rounds=0 last_applied=50011
+N1 cum_applied_target=100000 step=50000 verify50000=[missing 0] stall_events=0 stall_ms=0 flush_done=8 flush_failed=0 wal_rotations=8 wal_bytes=71777 sst_bytes=133097 compaction_rounds=2 last_applied=100016
+N1 cum_applied_target=150000 step=50000 verify50000=[missing 0] stall_events=0 stall_ms=0 flush_done=12 flush_failed=0 wal_rotations=12 wal_bytes=175199 sst_bytes=133356 compaction_rounds=3 last_applied=150018
+N1 cum_applied_target=200000 step=50000 verify50000=[missing 0] stall_events=0 stall_ms=0 flush_done=16 flush_failed=0 wal_rotations=16 wal_bytes=310064 sst_bytes=131554 compaction_rounds=4 last_applied=200026
+N1_DONE
+
+## B) RAFTK_LSM_WRITE_BUFFER_BYTES=65536 (diagnostic knob) — stall path exercised
+N1 cum_applied_target=50000 step=50000 verify50000=[missing 0] stall_events=6 stall_ms=12 flush_done=171 flush_failed=0 wal_rotations=171 wal_bytes=8927 sst_bytes=70797 compaction_rounds=80 last_applied=50020
+N1 cum_applied_target=100000 step=50000 verify50000=[missing 0] stall_events=12 stall_ms=22 flush_done=345 flush_failed=0 wal_rotations=345 wal_bytes=10428 sst_bytes=26400 compaction_rounds=169 last_applied=100034
+N1 cum_applied_target=150000 step=50000 verify50000=[missing 0] stall_events=15 stall_ms=32 flush_done=517 flush_failed=0 wal_rotations=517 wal_bytes=10033 sst_bytes=114866 compaction_rounds=258 last_applied=150041
+N1 cum_applied_target=200000 step=50000 verify50000=[missing 0] stall_events=19 stall_ms=40 flush_done=690 flush_failed=0 wal_rotations=690 wal_bytes=22989 sst_bytes=70798 compaction_rounds=346 last_applied=200047
+N1_DONE
