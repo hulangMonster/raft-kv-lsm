@@ -1261,3 +1261,50 @@ A 组用例（**只改 `tests/crash_test.cpp`，未动任何产品代码**；lsm
 **提交与 tag 语义**：本项提交在 **lsm 仓**（`0361e48`，tests-only）。最终 lsm 基座与
 tag `m6-raft-integration` 仍指向 **`51c4672`** —— `0361e48` 是**事后追加的 tests-only 提交**，
 只增加用例、不改产品代码，因此不影响该 tag 所固定的引擎语义（本仓 M6.10.5 之前的全部数字仍可用 `51c4672` 复现）。
+
+## M6.10.5 加固总览与最终树验收（② ⑧ ⑤ ①）
+
+四项加固按「每项一个提交 + 逐项验收」推进。**所有判据都要求正向标记**——没有正向标记就等于没测到：
+
+| 项 | 判据（判据未放宽） | 正向标记（缺一即整项 FAIL） | 原始输出 |
+|---|---|---|---|
+| **②** 两套 compact 交互 | 跨引擎 25 轮逐项等价（`mismatches=0`，重开后逐字节相同）；6 轮 `verify missing 0`；kill -9 重启后仍 `missing 0`；被压缩区间 `[1,lastIncluded)` 在两引擎都 `termAt=kNoTerm`、`slice` 不返回 ≤ 边界的条目、重开不复活 | `lsm_compaction_rounds` 21→**140**、`lsm_flush_done` 81→501、`snapshot_index` 19465→**119834**、`stats().compacts=24` | `docs/raw/m6.10.5-two-compactions.log` |
+| **⑧** `raft_e2e.sh` 既有 flake | 只对**首次 put** 做有界重试（`PUT_RETRY_MAX=8` / 0.25s），**只在 `NOT_LEADER` 上重试**；`\|\| true` / 减轮次 / 跳断言 = **0 处** | 同一负载下 raw **5/80 FAIL** vs retry **200/200**，其中 `attempts=2` **真的触发 24 次** | `docs/raw/m6.10.5-e2e-probe.log` |
+| **⑤** P99 桶上界 + `max`（只改本副本） | 新断言钉住「新桶分辨率 + 真实 max + 保留旧分辨率」；**旧断言删除 0** | 60ms 样本：旧实现落溢出桶报 50000，新实现报 100000 档且 `lat_max_us=60000`；三臂新行 `lat_max_us` 实测 14.9–83.0ms | `docs/raw/m6.10.5-bench-ab-p99max.log` |
+| **①** 掉电 / WAL 尾（lsm 仓 **tests-only**） | 恢复必须是一致前缀、不 Corruption、**不得静默截断到更早**（`recovered == kSynced` 是**等式**不是下界）、未 fsync 的 key 必须 `IsNotFound` | **显式丢失计数** `lost == kUnsynced`；介质层字节数回落到 fsync 水位；反事实：把注入改成 no-op ⇒ 用例 RED（781/792/799/804） | `docs/raw/m6.10.5-lsm-memenv-powerloss.log` |
+
+### 最终树验收（原始计数行）
+
+最终树 = `raft-kv-lsm` @ 本节提交 + lsm pin `/tmp/lsm-pin-51c4672`
+（lsm 仓另有事后 **tests-only** 提交 `0361e48`；引擎代码与 `51c4672` 逐字节相同，故门禁与 A/B 口径不变）。
+
+| 腿 | 结果 |
+|---|---|
+| Release 干净重建 | **0 warning / 0 error；165/165 PASS；M1 13/13** |
+| ASan 全量 | **165/165；0 条 `ERROR: AddressSanitizer`** |
+| TSan canonical（`tests/tsan.supp`） | **rc=0；0 warning；0 data race；161/161** |
+| TSan 无抑制 | **rc=66；16 条既有（8 double-lock + 8 lock-order-inversion）；0 data race；161/161** |
+| 四门禁**原样** lsm/lsm 10 轮 | `raft_e2e` 10/10、`raft_fault` rc=0、`raft_snapshot_fault` rc=0、`raft_membership_fault` rc=0；PHASE B 全 PASS；**FAIL_SUM=0** |
+| `kill -9 → verify missing 0` | 杀 leader 前后均 `missing 0`；`kill9_verify: PASS` |
+| `raft_e2e` 照原样 10 轮（逐轮、**不 break**） | **10/10 PASS，0 fail**（本轮未撞 flake；⑧ 的补丁已在树上） |
+
+TSan 161 = 165 − 4：`LsmCrash.*` 的 2 个 + `LsmApplyReopen.*` 的 2 个 fork+`_exit` 用例在
+`__SANITIZE_THREAD__` 下编译排除，由 ASan/Release 两条腿覆盖。
+三臂 A/B 直接引用 ⑤ 那一轮（同一最终树：⑤ 的 A/B 跑在 ⑧/① 之前，而 ⑧ 只改仓库脚本、① 只改 lsm 的 `tests/`，
+都不影响 `raftkv_raft_node`）→ `docs/raw/m6.10.5-bench-ab-p99max.log`。
+原始输出汇总：`docs/raw/m6.10.5-final-acceptance.log`。
+
+### M6.10.5 仍未做 / 未验证
+
+- **⑧ 的残余风险**：补丁只覆盖**首次** put。后续 `out=$(cli ...)` 调用若在同样的领导权窗口撞上
+  `NOT_LEADER` 仍会中止（本轮 12 轮负载 sanity + 最终树 10 轮均未出现）。**刻意不预先扩大补丁**：
+  脚本后半段「无多数派」阶段的 put **本来就必须失败**，铺重试会把「应当失败的断言」重试掉。
+- **① 的边界**：只覆盖**文件数据**层；MemEnv 没有目录项语义（`RenameFile` 一次赋值即永久、
+  `SimulateCrash` 不碰 `dirs_`），**dirent/rename 的掉电顺序仍不可建模**（m3-design §12.5 / P7）。
+- **N1 的 tick() 延迟**：未直接插桩（用客户端可见延迟作代理）。
+- **N4**：未给 lsm 子目录传 `BUILD_TESTING=OFF`（实测三种父侧手段均无效），现用 `cmake/lsm-wrapper`
+  等效手段；README 已钉死固定基座的构建命令与 live-worktree 风险。
+- **G13**：raft-kv 侧仍只有 ASan 生命周期与「`_Exit` 跳过 LSan」的说明；TSan 不跨进程。
+- **RSS 未降**（读侧镜像，N-D）；**SM fsync 未并入 group commit**。
+- **M6.7 的 A/B 数字**仍是当时机器状态下的（`docs/m6-bench.md` 已注明 loadavg 4.7–15.9 的污染）；
+  本轮三臂 A/B 是安静机器上的复测。

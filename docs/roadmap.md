@@ -134,7 +134,8 @@
 - ✅ `--state-engine=mem|lsm`（默认 mem）；4 个门禁脚本透传 `--state-engine`
 - ✅ 原子性：一次 `apply` 的 数据+去重表+`lastApplied` = 一个 lsm `WriteBatch`；崩溃/重开一致；`restore` 原子
 - ✅ 门禁 `--log-engine lsm --state-engine lsm`：fault/snapshot/membership 各 10 轮**真 PASS**；`raft_e2e` 是**既有 harness flake**（三臂 8.3%/8.3%/16.7% 同量级，见 evidence §M6.9-2）；kill -9 -> `verify missing 0`
-- ✅ ASan 163/163 全绿 0 报告；TSan canonical 0 报告 / 无抑制 16 条（0 data race，与基线一致）；Release 干净重建 0 warning + 163/163 + M1 13/13（lsm 51c4672）
+- ✅ ASan 165/165 全绿 0 报告；TSan canonical 0 报告 / 无抑制 16 条（0 data race，与基线一致）；Release 干净重建 0 warning + 165/165 + M1 13/13（lsm 51c4672）
+- ✅ **M6.10.5 四项加固**：② 两套 compact 交互（正向标记 lsm_compaction_rounds 21→140 / snapshot_index 19465→119834）；⑧ `raft_e2e.sh` 首次 put 的有界重试（同负载 raw 5/80 FAIL vs retry 200/200，重试真触发 24 次）；⑤ 写延迟直方图上界 50ms→1s + `lat_max_us`；① lsm 仓 MemEnv 掉电 A 组补「注入真的生效」（lsm `0361e48`，tests-only）
 - 🔒 **最终 lsm 基座 = `51c4672`**（`d62d8b3` flush/Close 竞态修复 + `51c4672` M5-C/M5-D 测量条件修正）；历次基座：`b1bd050` → `f06a44d` → `51c4672`
 - ✅ M6.10.1（B1）：restore 改双命名空间 + 值分块 + 单键指针提交（>64 MiB 载荷 / 超大单值可分块落盘；失败保旧、重入幂等）
 - ⛔ **阻塞（已上报）**：lsm 引擎 flush 与 Close/kill -9 竞态会留下孤儿 `*.sst`（无 MANIFEST）使 `DB::Open` Corruption；既有 `LsmLogStore` 同样受影响。端到端 reopen 验证待 lsm 修复后并入套件。证据 `docs/raw/m6.10.1-BLOCKER-lsm-flush-close.md`

@@ -1,0 +1,36 @@
+# M6.10.5 (4) 最终树收尾验收
+# 最终树 = raft-kv-lsm @ 22a97ac + lsm pin /tmp/lsm-pin-51c4672
+#   （lsm 仓另有事后 tests-only 提交 0361e48；引擎代码与 51c4672 逐字节相同，故 A/B 与门禁口径不变）
+
+## Release 干净重建
+rel_build_rc=0 warn$(grep -c warning: /tmp/fa-rel-build.log) err$(grep -c error: /tmp/fa-rel-build.log)
+[  PASSED  ] 165 tests.
+raftkv_tests(M1): all tests passed (13)
+
+## ASan 全量
+asan_rc=0 reports=$(grep -c "ERROR: AddressSanitizer" /tmp/fa-asan.log) warn$(grep -c warning: /tmp/fa-asan-build.log)
+[  PASSED  ] 165 tests.
+
+## TSan 双口径
+canonical:  rc=0 warn=$(grep -c "WARNING: ThreadSanitizer" /tmp/fa-tsan-canon.log) race=$(grep -c "data race" /tmp/fa-tsan-canon.log)
+[  PASSED  ] 161 tests.
+no-supp:    rc=66 warn=$(grep -c "WARNING: ThreadSanitizer" /tmp/fa-tsan-nosupp.log) race=$(grep -c "data race" /tmp/fa-tsan-nosupp.log)
+      8 double lock of a mutex (pid=335616)
+      8 lock-order-inversion (potential deadlock) (pid=335616)
+[  PASSED  ] 161 tests.
+
+## 四门禁（仓库脚本原样，--log-engine lsm --state-engine lsm）+ kill -9
+
+## raft_e2e 照原样 10 轮（逐轮、不 break）
+E2E lsm/lsm round 1 rc=0 PASS
+E2E lsm/lsm round 2 rc=0 PASS
+E2E lsm/lsm round 3 rc=0 PASS
+E2E lsm/lsm round 4 rc=0 PASS
+E2E lsm/lsm round 5 rc=0 PASS
+E2E lsm/lsm round 6 rc=0 PASS
+E2E lsm/lsm round 7 rc=0 PASS
+E2E lsm/lsm round 8 rc=0 PASS
+E2E lsm/lsm round 9 rc=0 PASS
+E2E lsm/lsm round 10 rc=0 PASS
+E2E_SUMMARY total=10 pass=10 fail=0
+E2E_DONE
