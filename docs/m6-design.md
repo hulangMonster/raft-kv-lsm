@@ -1241,3 +1241,170 @@ cd ~/raft-kv-lsm && grep -n 'FileLogStore\|FileSnapshotStore\|KvStateMachine\|--
 ```
 
 **未跑过、因此未验证的命令**：任何 `cmake`/`make`/测试/基准；任何 `git commit`/`push`/`checkout`/`reset`；任何对 `~/raft-kv` 或 `~/lsm-kv` 的写操作。
+
+---
+
+## §10 M6.9 追加修订：状态机数据落到 LSM（状态机后端）
+
+> 本节是**纯追加**修订，不改动 §0–§9 与附录 A 的任何一行。M6.9.0 交付本节设计。
+
+### 10.1 背景与已裁决决策
+
+- `RaftNode` 只依赖抽象 `raft::StateMachine&`；进程内实现是纯内存的 `KvStateMachine`（M2 决策 D1）。
+- M6.1–M6.8 只把 **LogStore** 换成了 lsm；状态机数据仍在内存。M6 目标 2 要求状态机数据落到 lsm。
+
+### 10.2 目标 / 非目标
+
+**目标**
+1. 新增 `LsmKvStateMachine`，让状态机的 `数据 / 去重表 / lastApplied` 由 lsm 引擎持久承载。
+2. `apply` 对同一 `(clientId, requestId)` 幂等；三者**同一原子批**落盘（M6-I10）。
+3. 快照边界不变：`snapshotView()` 仍是锁内纯内存拷贝，`restore()` 仍是整体替换；`restore` 后 `lastApplied` 不低于快照边界。
+4. 开关切换；默认 mem 路径**零行为变更**；两条路径都可跑通 M6 门禁。
+5. 编解码安全（M6-I11）：畸形/越界载荷不得越界读、不得 panic。
+
+**非目标（硬边界）**
+
+| # | 非目标 | 理由 |
+|---|---|---|
+| N-A | 不改 `raft_node.cpp` 的共识逻辑 | 与 N1 一致；状态机替换只经由既有 `StateMachine` 接口 |
+| N-B | 不改快照文件格式与 `SnapshotStore` 接口 | 线上/磁盘兼容 |
+| N-C | 不改 `~/lsm-kv` | M6 范围外 |
+| N-D | **不降低内存占用**：本里程碑保留内存镜像（read-side mirror） | `snapshotView()` 契约要求锁内纯内存；`get()` 在共识锁内 ⇒ 不能在锁内读盘。降 RSS 是后续独立课题 |
+| N-E | 不做 file→lsm 状态机数据迁移 | YAGNI，同 N6 |
+| N-F | 不支持 >64 MiB 的单次 `restore` 差量批（lsm 单批上限） | 超出时 `restore()` 明确返回 false，绝不静默截断 |
+
+### 10.3 类与物理布局
+
+- `src/kv/lsm_kv_state_machine.h`：只前置声明 `namespace lsm { class DB; }`，持有 `unique_ptr<lsm::DB, LsmDbDeleter>`（pimpl）。**不 include 任何 lsm 头**（分层纪律：LSM 类型只允许出现在适配层实现文件内）。
+- `src/kv/lsm_kv_state_machine.cpp`：唯一 include lsm 头（`db.h` / `write_batch.h`）的适配层实现文件。`raft_node.cpp` 不出现任何 LSM 头。
+- 数据目录：`<data-dir>/kv-lsm`。与 `FileLogStore` 的 `<data-dir>/raft`、`LsmLogStore` 的 `<data-dir>/raft-lsm` **物理隔离**：三个 DB 互不干扰，`raft_snapshot_fault.sh` 的 `LOG_BOUND` 口径（只看 `raft-lsm`）不受影响。
+- 键空间（**内部格式，非协议**：不进快照文件、不上网）：
+
+| key | value | 说明 |
+|---|---|---|
+| `0x00` + `applied`（8B） | BE64(lastApplied) | 同批的 applied 水位 |
+| `0x01` + userKey | value | KV 数据（前缀保证与其余两类不冲突） |
+| `0x02` + BE64(clientId)（9B） | BE64(requestId) | 去重表 |
+
+- 读侧镜像（mirror）：构造时全量扫描 lsm 重建 `data_ / lastRequest_ / lastApplied_`；`get()/snapshotView()/lastApplied()` 只读 mirror（纯内存、无 I/O）。
+
+### 10.4 与既有 KvStateMachine 的等价性对照表
+
+| 方法 | `KvStateMachine`（mem） | `LsmKvStateMachine`（lsm） | 等价性 |
+|---|---|---|---|
+| `apply(kPut/kDel)` | 改 `data_`；更新 `lastRequest_`；`lastApplied_=index` | 同一 `WriteBatch`：数据 Put/Delete + 去重 Put + applied Put；**写成功后再改 mirror** | 数据/去重语义等价；多一条 WAL 写（代价见 §10.12） |
+| `apply(重复 (cid,rid))` | 丢弃数据改动 | 只写 applied 的批（数据/去重不变） | **两者都推进 `lastApplied_`**（C13） |
+| `apply(kGet/kConfig)` | no-op，仅推进 `lastApplied_` | 只写 applied 的批 | 等价 |
+| `get(k)` | `data_.find` | `data_.find`（mirror） | 等价 |
+| `lastApplied()` | mirror 值 | mirror 值 | 等价 |
+| `snapshotView()` | 拷贝 `data_/lastRequest_/lastApplied_` | 同上（从 mirror 拷贝） | 载荷逐字节相同（测试钉住） |
+| `restore(payload)` | 解析并整体替换三张表 | 解析 → 与 mirror 求差 → **一个 WriteBatch** → 替换 mirror | 载荷格式相同；lsm 版多一次原子批写 |
+
+注：C13 是本里程碑对既有 `KvStateMachine` 的**唯一**行为改动 —— 重复条目也要推进 `lastApplied_`。这不是语义放宽而是 M6-I10 要求的补强：client 重试会以同一 `(clientId, requestId)`、**更高 index** 重新入日志（见 `main_raft_client.cpp` 的 redirect 重试），若不推进，SM 的 `lastApplied` 会落后于 Raft 快照边界 `snapIndex`，快照载荷里的 applied 水位就小于边界。既有断言 `KvIdempotent.ApplyIsIdempotentOnRetry`（同 index 重放，断言 `lastApplied()==1`）逐字不变、仍通过。
+
+### 10.5 原子落盘与 durable 落点表
+
+**核心事实**：Raft 的 ack 由 **raft 日志的 fsync** 保证；状态机是从 durable 快照 + durable 日志可**确定性重建**的派生态。因此状态机自身的 fsync **不在 ack 关键路径**（与 TiKV 等把 raftdb 作为真相源、state db 异步落盘的做法同构）。
+
+| 操作 | 锁 | WriteBatch 内容 | fsync 落点 | ack 依赖 |
+|---|---|---|---|---|
+| `apply(kPut)` | 持 `mu_`（`advanceCommitAndApply`） | 数据 Put + 去重 Put + applied Put（1 条 record） | **无**（`WriteOptions.sync=false`，只写 WAL/memtable，等同 `LogStore::appendNoSync`） | 不依赖；ack 依赖 `log_.sync()` |
+| `apply(kDel)` | 同上 | 数据 Delete + 去重 Put + applied Put | 无 | 同上 |
+| `apply(重复 / no-op)` | 同上 | applied Put | 无 | 同上 |
+| `restore(payload)` | 持 `mu_`（构造期不持；`onInstallSnapshot` 持） | Put/Delete 差量 + applied Put（1 条 record） | 无 | 同上 |
+| 优雅关闭 | 无 | — | 显式 `LsmKvStateMachine::sync()`（`main` 在 `_Exit` 前调用） | — |
+| `sync()`（测试/诊断缝） | **不得持 `mu_`** | — | `DB::Sync()` | — |
+
+**同一原子批落盘的口径**：三者进同一条 lsm WAL record，`DB::Open` 的恢复（含尾部截断）保证**要么整条都在、要么整条都不在** ⇒ 崩溃重启后绝不会出现「数据在、去重表丢」或反之。重启一致性由「lsm 原子批 + 从日志重放幂等」双重覆盖。
+
+**为什么不在 ack 前 fsync 状态机**：
+1. M6-L2 禁止持 `mu_` 做 fsync；而 `apply` 在 `mu_` 内被调用（`advanceCommitAndApply`）。
+2. 若要在 ack 前 fsync，需要在 `raft_node.cpp` 的 group-commit 结构里、释放 `mu_` 之后与 `cv_.notify_all()` 之前插一次 SM fsync —— 动了 N1 的共识路径，收益仅是少一次重启重放，不值。
+3. 正确性不依赖它：ack 前日志已 durable；重启时 `RaftNode` 按 快照边界 + 日志重放 重建状态机。
+
+### 10.6 锁序（单向）
+
+```text
+RaftNode::mu_  ->  LsmKvStateMachine（无自有锁，全部调用由 mu_ 串行）  ->  lsm DB 内部锁（WAL/memtable/version）
+```
+
+- 固定单向，禁止反向。`snapshotOpMu_`（raft 侧叶子锁）只在 `mu_` 之外获取，与状态机无关。
+- `LsmKvStateMachine` **不自带**互斥（与 `KvStateMachine` 一致）：调用方用 `mu_` 串行；`get()` 也必须在 `mu_` 内。
+- `sync()` 是唯一例外：它只碰 lsm 内部锁、可无 `mu_` 调用；调用期间不读 mirror。
+- 与 `LsmLogStore` 的关系：两个**独立** DB（`kv-lsm` vs `raft-lsm`），各自内部锁、无嵌套 ⇒ 无死锁环。
+
+### 10.7 关闭顺序
+
+期望顺序（局部对象声明顺序的逆序）：
+```text
+停止 accept -> 停 ticker（join）-> reactor.stop() -> RaftNode 不再使用 sm
+  -> 显式 LsmKvStateMachine::sync()（优雅落盘点）
+  -> 进程 _Exit（既有实现：避免 detached 连接线程触碰已析构对象）
+```
+既有 `main_raft_node.cpp` 末尾用 `std::_Exit(0)`，栈对象析构**不运行**，因此 `DB::Close()` 不会发生；本里程碑在 `_Exit` 前补一次显式 `sync()`（lsm 臂），把「优雅关闭 = durable」写实。崩溃（`kill -9`）时不依赖它：WAL 已在 page cache，掉电场景靠日志重放。
+
+### 10.8 开关与回退验证方案
+
+- CLI：`--state-engine=mem|lsm` 与 `--state-engine mem|lsm`；环境变量 `RAFTKV_STATE_ENGINE` 覆盖（沿用 `--log-engine` 的既有模式，见 M6.5-D1：本机 → VM 通道上 `VAR=value cmd` 前缀赋值不可靠，**CLI 参数是权威通道**，环境变量仍照传）。
+- **默认 mem** ⇒ 不带开关时逐字节走 M2–M6.8 既有实现，零行为变更。
+- 未知值 ⇒ `exit 2` 并打印 `unknown --state-engine`，**绝不静默降级**。
+- 未把 lsm 编进二进制（`RAFTK_HAVE_LSM` 未定义）时，`LsmKvStateMachine` 构造函数抛明确错误（含修复提示）⇒ main catch 后非 0 退出。
+- **一键回退**：去掉 `--state-engine`（或显式 `--state-engine=mem`）即回到既有实现。
+- 验证：`--state-engine=mem` 与 `=lsm` 两条路径各跑一遍同组门禁（M6.9.3）。
+
+### 10.9 测试矩阵
+
+| 层 | 载体 | 断言要点 |
+|---|---|---|
+| 契约单测（mem + lsm 同一组断言） | `tests/sm_contract_body.h`（模板体）+ `tests/raft_sm_contract_test.cpp`（KvStateMachine）+ `tests/raft_lsm_state_machine_test.cpp`（LsmKvStateMachine） | 幂等重放（同 cid/rid 不同 index：数据不变、applied 前进）；`kGet/kConfig` 推进 applied；快照载荷**逐字节相同**（serialize 与流式拼接）；restore 往返 / 交叉 restore；畸形载荷拒绝；空状态 |
+| LSM 专属：崩溃一致性 | `tests/raft_lsm_state_machine_test.cpp` | 写 N 条 → 不析构直接重开（等价 kill -9）→ 三者一致；重放同批 → 幂等；WAL 尾部注入垃圾 → 恢复出**一致前缀**、不 panic |
+| LSM 专属：restore 原子性 | 同上 | `restore` 后重开，数据/去重/applied 三者都到位 |
+| 端到端门禁 | `scripts/raft_e2e.sh` / `raft_fault.sh` / `raft_snapshot_fault.sh` / `raft_membership_fault.sh` 各加 `--state-engine` | `--state-engine=lsm` 至少 10 轮 PASS；`kill -9` 后 `verify missing 0` |
+| Sanitizer | ASan / TSan 构建 | 新代码路径 0 越界 / 0 data race |
+| Release 干净重建 | `build/` | 0 warning + 全量用例全绿 |
+
+### 10.10 边界 case 全集
+
+1. 空状态：无任何 apply，`lastApplied()==kNoIndex`，`snapshotView()` 序列化只有头部。
+2. 单 key 的 put/get/overwrite/del；del 不存在的 key（幂等成功、推进 applied）。
+3. 同 key 不同 `(cid,rid)`：后者覆盖前者。
+4. 同 `(cid,rid)` 重放到**更高 index**：数据不变、`lastApplied` 前进（C13）。
+5. `rid` 相等或更小：视为重复。
+6. `kGet` / `kConfig` 标记条目：只推进 applied。
+7. 快照往返：restore 后再 snapshot，载荷逐字节不变；交叉 restore（mem↔lsm）成立。
+8. 流式快照：`maxChunk` 极小（1 字节）时多次 `next()` 拼接结果与 `serialize()` 逐字节相同。
+9. 畸形载荷全集：长度 <8、kvCount 越界、klen/vlen 之和溢出、dedupCount 越界、尾部多余字节、截断在任意字段中间 ⇒ `restore()` 返回 false、状态不变、无越界读 / panic。
+10. 崩溃一致性：写入后不析构重开；WAL 尾部撕裂垃圾 ⇒ 一致前缀 + 尾部截断计数。
+11. 大状态：100k 条快照往返（门禁 A 段覆盖）。
+12. 重启后 `restore` 的 applied ≥ 快照边界。
+
+### 10.11 允许的追加小改（C10–C15）
+
+| # | 改动 | 位置 | 理由 |
+|---|---|---|---|
+| C10 | 新增 `src/kv/lsm_kv_state_machine.{h,cpp}` | 新文件 | M6.9 的核心逻辑 |
+| C11 | `CMakeLists.txt`：`lsm_kv_state_machine.cpp` 进 `raftkv_raft`；新测试文件进 `raftkv_raft_tests` | L55-70 / L110+ | 构建接线 |
+| C12 | `src/main_raft_node.cpp`：`--state-engine=mem|lsm` + `RAFTKV_STATE_ENGINE`（默认 mem）；`_Exit` 前显式 `sync()` | 仿 `--log-engine` | 开关 + 优雅落盘点 |
+| C13 | `src/kv/kv_state_machine.cpp` **一行**：重复条目也推进 `lastApplied_` | `apply` 的重复分支 | M6-I10：restore 后 applied ≥ 快照边界；不删 / 不弱化任何断言 |
+| C14 | `scripts/raft_{e2e,fault,snapshot_fault,membership_fault}.sh` 透传 `--state-engine` | 各参数解析 + `start_node()` | 用同一套门禁驱动两条路径 |
+| C15 | `docs/m6-evidence.md` / `README.md` / `docs/roadmap.md` 追加 | 文档 | M6.9.4 收口 |
+
+C10–C15 之外的一切改动都需要父代理裁决。
+
+### 10.12 风险 / 负结果预留（必须实测后如实回填）
+
+| # | 风险 | 预期 / 应对 |
+|---|---|---|
+| R-A | 写放大：每条 `apply` 多一条 lsm WAL 写（数据 + 去重 + applied 三行） | 实测 `--state-engine=lsm` 的吞吐 / 延迟代价，作为负结果登记；不设比值硬门禁 |
+| R-B | 内存未降：mirror 与 mem 臂同阶 | 明确登记为 N-D；不建议在 M6.9 内解决 |
+| R-C | `restore()` 差量批可能很大（InstallSnapshot） | 单批上限 64 MiB；超限返回 false（N-F），文档登记 |
+| R-D | 复制格式漂移：LSM 版与 mem 版载荷编码是两份实现 | 用「逐字节相同 + 交叉 restore」测试钉死；若漂移则测试直接红 |
+| R-E | `_Exit` 下优雅落盘仅在 lsm 臂显式 `sync()` 后成立 | 崩溃一致性用重开测试独立覆盖，不依赖关闭路径 |
+
+### 10.13 未做项（本设计时点，逐条）
+
+1. 未在 `raft_node.cpp` 引入「SM fsync 与日志 group commit 合并」的钩子（理由见 §10.5）。
+2. 未做状态机数据的 file→lsm 迁移工具（N-E）。
+3. 未降低状态机内存占用（N-D）。
+4. 未改 `~/lsm-kv`；若实现中发现 lsm 侧限制（例如 `DB::Write` 的批上限、`Iterator` 语义）会在此登记并停下报告。
+
