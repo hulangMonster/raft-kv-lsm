@@ -1,0 +1,103 @@
+# M6.10.5 (1) 掉电/页缓存语义（有界版）—— lsm 仓 MemEnv A 组用例
+# lsm 仓提交: 0361e48 (= 51c4672 + 本项；只改 tests/)
+# 变更文件: ~/lsm-kv/tests/crash_test.cpp（新增 CrashSim.UnsyncedWalTailIsActuallyDiscarded,
+#           CrashSim.CrashInjectionEffectiveAcrossSeeds）；**未改任何产品代码**。
+
+## A) 反事实自检 RED/GREEN（把 SimulateCrash() 首行插 return; 后新用例必须红）
+# build_rc=0  (0 = 编译通过，说明 RED 来自断言而不是编译错误)
+Note: Google Test filter = CrashSim.UnsyncedWalTailIsActuallyDiscarded:CrashSim.CrashInjectionEffectiveAcrossSeeds
+[ RUN      ] CrashSim.UnsyncedWalTailIsActuallyDiscarded
+/home/tengyujie/lsm-kv/tests/crash_test.cpp:781: Failure
+Expected equality of these values:
+SimulateCrash 必须把文件回滚到 fsync 水位，否则本用例证明不了任何事
+/home/tengyujie/lsm-kv/tests/crash_test.cpp:792: Failure
+Expected equality of these values:
+/home/tengyujie/lsm-kv/tests/crash_test.cpp:799: Failure
+Expected equality of these values:
+/home/tengyujie/lsm-kv/tests/crash_test.cpp:804: Failure
+Value of: db->Get(Key(i), &got).IsNotFound()
+  Actual: false
+Expected: true
+/home/tengyujie/lsm-kv/tests/crash_test.cpp:804: Failure
+Value of: db->Get(Key(i), &got).IsNotFound()
+  Actual: false
+Expected: true
+/home/tengyujie/lsm-kv/tests/crash_test.cpp:804: Failure
+Value of: db->Get(Key(i), &got).IsNotFound()
+  Actual: false
+Expected: true
+/home/tengyujie/lsm-kv/tests/crash_test.cpp:804: Failure
+Value of: db->Get(Key(i), &got).IsNotFound()
+  Actual: false
+Expected: true
+/home/tengyujie/lsm-kv/tests/crash_test.cpp:804: Failure
+Value of: db->Get(Key(i), &got).IsNotFound()
+  Actual: false
+Expected: true
+/home/tengyujie/lsm-kv/tests/crash_test.cpp:804: Failure
+
+## B) GREEN —— 还原 tests/memenv.cpp 后同一用例
+# git diff tests/memenv.cpp 必须为空: []
+[ RUN      ] CrashSim.UnsyncedSuffixLostNoTornValue
+[       OK ] CrashSim.UnsyncedSuffixLostNoTornValue (13 ms)
+[ RUN      ] CrashSim.RepeatedCrashRecoverLoop50
+[       OK ] CrashSim.RepeatedCrashRecoverLoop50 (69 ms)
+[ RUN      ] CrashSim.UnsyncedWalTailIsActuallyDiscarded
+[       OK ] CrashSim.UnsyncedWalTailIsActuallyDiscarded (1 ms)
+[ RUN      ] CrashSim.CrashInjectionEffectiveAcrossSeeds
+[       OK ] CrashSim.CrashInjectionEffectiveAcrossSeeds (14 ms)
+[  PASSED  ] 4 tests.
+
+## B) lsm 仓四条腿
+=== [1/4] Release 干净重建（lsm_build.sh：rm -rf build + 0 warning 断言 + 全量）===
+rel_rc=0
+[==========] 210 tests from 57 test suites ran. (38648 ms total)
+[  PASSED  ] 210 tests.
+[CHECK] 用例计数：
+[==========] 210 tests from 57 test suites ran. (38648 ms total)
+[  PASSED  ] 210 tests.
+[OK] 干净重建 + 0 warning + lsm_tests 全绿（日志：build/build.log）
+=== [2/4] ASan ===
+asan_build_rc=0 warn=0
+asan_rc=0 reports=0
+[  PASSED  ] 210 tests.
+=== [3/4] TSan 全量 ===
+tsan_build_rc=0 warn=0
+tsan_rc=0 warn=0 race=0
+[  PASSED  ] 210 tests.
+=== [4/4] lsm_gate --rounds 100 --no-asan --require-m3 --require-m5 ===
+gate_rc=0
+PASS  M4-B02 四注入点 raise(SIGKILL) 对账
+PASS  M5-B11 filter 单元 + 块读下降 + 零假阴性 + 依赖纪律
+PASS  M5-B12 WriteBatch 单元 + 整批原子 + WAL 一次写 + 依赖纪律
+PASS  M5-B01 批崩溃对账（kill -9 批写入中途）
+PASS  M5-C 基准（四类负载 × 三类对照 + AMPL/LEVEL/FRONT 追加列，硬门禁只在 LSM 腿）
+PASS  M5-D 基准失败注入自测（missing!=0 ⇒ rc=1）
+PASS  M5-E filter 磁盘损坏扫描（零静默假阴性）
+[OK] 全部门禁通过
+
+## C) lsm_gate 逐腿（24 腿）
+PASS  干净重建 + 0 warning + 全量用例
+PASS  崩溃对账（kill -9 x 100，sync 模式）
+PASS  逐字节截断扫描（B03）
+PASS  中间损坏拒绝启动（B04）
+PASS  M3-B01 flush 崩溃对账（kill -9 x 100）
+PASS  M3-B03 落盘重启（records_replayed == 0）
+PASS  M3-B04 SSTable 损坏扫描（零静默错值）
+PASS  M3-B05 句柄计数不增长
+PASS  M4-B11 MANIFEST/VersionEdit A 组 + 零依赖
+PASS  M4-B03 两种 pick 策略对照
+PASS  M4-B05 句柄上限（fd 不增长）
+PASS  M4-B06 读放大改善（p50<=3 max<=12）
+PASS  M4-B07 前台 P99 与单轮 P50 量级分离
+PASS  M4-B08 存活 Version 数有界（计数存在）
+PASS  M4-B09 MANIFEST 体积/重建计数
+PASS  M4-B10 块缓存 NOT_APPLICABLE
+PASS  M4-B01 compaction 中途 kill -9 对账
+PASS  M4-B02 四注入点 raise(SIGKILL) 对账
+PASS  M5-B11 filter 单元 + 块读下降 + 零假阴性 + 依赖纪律
+PASS  M5-B12 WriteBatch 单元 + 整批原子 + WAL 一次写 + 依赖纪律
+PASS  M5-B01 批崩溃对账（kill -9 批写入中途）
+PASS  M5-C 基准（四类负载 × 三类对照 + AMPL/LEVEL/FRONT 追加列，硬门禁只在 LSM 腿）
+PASS  M5-D 基准失败注入自测（missing!=0 ⇒ rc=1）
+PASS  M5-E filter 磁盘损坏扫描（零静默假阴性）

@@ -1215,3 +1215,49 @@ store 级用例 `--gtest_filter=RaftLogStoreDiff.RaftPrefixCompactionUnderLsmBac
 (b) `lat_max_us` 把旧实现抹平成单一 50000 的 15–83ms 尾部暴露出来。
 
 **复跑**：`scripts/bench_m6_ab.sh --repeats 3 --only base,file,lsm`。
+
+### M6.10.5 加固（1）掉电 / 页缓存语义（有界版）：未 fsync 的 WAL 尾必须**真的**丢
+
+**做了什么**：在 `~/lsm-kv` 的既有 MemEnv 崩溃模型（`SimulateCrash()` 按每文件 `synced_size` 回滚）上补了两条
+A 组用例（**只改 `tests/crash_test.cpp`，未动任何产品代码**；lsm 仓提交 `0361e48`）。
+
+**为什么需要它们（空绿风险）**：既有 A27 只断言「未 fsync 的后缀**可以**丢」——
+`prefix ∈ [kSynced, kSynced+kUnsynced]` 是**闭区间**，所以 `SimulateCrash()` 即便退化成 no-op 它照样绿。
+本项把「注入确实生效」本身变成判据：
+
+- `CrashSim.UnsyncedWalTailIsActuallyDiscarded`（`tear=0`，干净回滚，把"回滚是否生效"与"撕裂尾如何截断"分开）：
+  1. **前置断言**：文件里真的存在一段未 fsync 的后缀（`full_bytes > synced_bytes`）；
+  2. **介质层正向标记**：掉电后当前 WAL 的字节数必须回落到该文件的 fsync 水位；
+  3. **恢复层**：`DB::Open` 必须成功（不 Corruption）、恢复前缀**恰好**等于已 fsync 的条数、
+     **显式丢失计数** `lost == kUnsynced`（少丢 ⇒ 注入没生效；多丢 ⇒ 把已 durable 的也截掉了）、
+     每个未 fsync 的 key 必须 `IsNotFound`（不得谎报 durable）。
+- `CrashSim.CrashInjectionEffectiveAcrossSeeds`（3 seeds × 3 tears 聚合）：不得出现半条值
+  （`CheckedPrefix != -1`）、已 fsync 前缀一条不少，且**聚合丢失计数 > 0**。
+
+**反事实自检（RED 证据）**：把 `SimulateCrash()` 首行插 `return;`（编译通过，排除"红是因为编译失败"）后，
+两条新用例立刻 RED，红的正是"注入生效"那几条断言（介质回滚 / 前缀计数 / 丢失计数 / key 必须 NotFound）；
+还原 `tests/memenv.cpp`（`git diff` 为空）后恢复 GREEN。原始输出见
+`docs/raw/m6.10.5-lsm-memenv-powerloss.log` 的 A 段。
+
+**判据口径**（`docs/protocol.md` §13.2 + m2-design I11）：
+- `sync = true` = durable-before-ack：返回 `kOk` 之前该记录已 write 且 fsync 成功 ⇒ **ack 过的记录不得消失**；
+  本用例用的是**等式** `recovered == kSynced` 而不是下界，因此"静默截断到更早"同样会被抓住。
+- `sync = false` 由 OS 决定：掉电后可以丢，但必须是**一致前缀**、不得 Corruption、不得出现半条值。
+- **结论：未发现"ack 过的记录会消失"这类契约违反。**
+
+**边界（不许外推）**：本项覆盖的是**文件数据**层面的掉电语义。MemEnv 没有目录项语义
+（`tests/memenv.h`：`RenameFile` 一次赋值即永久、`SimulateCrash` 不碰 `dirs_`），
+所以 **dirent/rename 的掉电顺序仍无法在此建模**（docs/m3-design.md §12.5 / P7）。
+
+**lsm 仓四条腿（原始计数行）**：
+
+| 腿 | 结果 |
+|---|---|
+| Release 干净重建（`lsm_build.sh`：`rm -rf build` + 0 warning 断言 + 全量） | **0 warning；210/210 PASS**（208 + 本项 2 条） |
+| ASan 全量 | **210/210；0 条 `ERROR: AddressSanitizer`** |
+| TSan 全量（`setarch -R`） | **rc=0；0 warning；0 data race；210/210** |
+| `lsm_gate.sh --rounds 100 --no-asan --require-m3 --require-m5` | **24 PASS / 0 FAIL / 0 SKIP；`gate_rc=0`；`[OK] 全部门禁通过`** |
+
+**提交与 tag 语义**：本项提交在 **lsm 仓**（`0361e48`，tests-only）。最终 lsm 基座与
+tag `m6-raft-integration` 仍指向 **`51c4672`** —— `0361e48` 是**事后追加的 tests-only 提交**，
+只增加用例、不改产品代码，因此不影响该 tag 所固定的引擎语义（本仓 M6.10.5 之前的全部数字仍可用 `51c4672` 复现）。
