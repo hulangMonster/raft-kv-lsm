@@ -1,0 +1,18 @@
+# M6.9.1 TDD RED (compile): LsmKvStateMachine does not exist yet
+# command: cmake .. && make -j8 raftkv_raft_tests
+# expected: fatal error: kv/lsm_kv_state_machine.h: No such file or directory
+
+Consolidate compiler generated dependencies of target lsm
+[ 43%] Built target lsm
+Consolidate compiler generated dependencies of target raftkv_raft
+[ 71%] Built target raftkv_raft
+Consolidate compiler generated dependencies of target raftkv_raft_tests
+[ 74%] Building CXX object CMakeFiles/raftkv_raft_tests.dir/tests/raft_lsm_state_machine_test.cpp.o
+/home/tengyujie/raft-kv-lsm/tests/raft_lsm_state_machine_test.cpp:16:10: fatal error: kv/lsm_kv_state_machine.h: No such file or directory
+   16 | #include "kv/lsm_kv_state_machine.h"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+make[3]: *** [CMakeFiles/raftkv_raft_tests.dir/build.make:160: CMakeFiles/raftkv_raft_tests.dir/tests/raft_lsm_state_machine_test.cpp.o] Error 1
+make[2]: *** [CMakeFiles/Makefile2:330: CMakeFiles/raftkv_raft_tests.dir/all] Error 2
+make[1]: *** [CMakeFiles/Makefile2:337: CMakeFiles/raftkv_raft_tests.dir/rule] Error 2
+make: *** [Makefile:225: raftkv_raft_tests] Error 2

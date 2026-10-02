@@ -1,0 +1,45 @@
+# M6.9.1 TDD RED (runtime): existing KvStateMachine violates M6-I10
+# command: ./build/bin/raftkv_raft_tests --gtest_filter='KvStateMachineContract.*'
+# baseline: HEAD 924492e + tests/sm_contract_body.h + tests/raft_sm_contract_test.cpp (no impl change)
+# expected: IdempotentHigherIndexAdvancesApplied fails (lastApplied stays 1, want 2)
+
+Note: Google Test filter = KvStateMachineContract.*
+[==========] Running 10 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 10 tests from KvStateMachineContract
+[ RUN      ] KvStateMachineContract.Empty
+[       OK ] KvStateMachineContract.Empty (0 ms)
+[ RUN      ] KvStateMachineContract.BasicOps
+[       OK ] KvStateMachineContract.BasicOps (0 ms)
+[ RUN      ] KvStateMachineContract.IdempotentSameIndex
+[       OK ] KvStateMachineContract.IdempotentSameIndex (0 ms)
+[ RUN      ] KvStateMachineContract.IdempotentHigherIndexAdvancesApplied
+/home/tengyujie/raft-kv-lsm/tests/sm_contract_body.h:150: Failure
+Expected equality of these values:
+  sm->lastApplied()
+    Which is: 1
+  static_cast<Index>(2)
+    Which is: 2
+
+[  FAILED  ] KvStateMachineContract.IdempotentHigherIndexAdvancesApplied (0 ms)
+[ RUN      ] KvStateMachineContract.MarkersAdvanceApplied
+[       OK ] KvStateMachineContract.MarkersAdvanceApplied (0 ms)
+[ RUN      ] KvStateMachineContract.CanonicalState
+[       OK ] KvStateMachineContract.CanonicalState (0 ms)
+[ RUN      ] KvStateMachineContract.SnapshotDeterministic
+[       OK ] KvStateMachineContract.SnapshotDeterministic (0 ms)
+[ RUN      ] KvStateMachineContract.StreamMatchesSerialize
+[       OK ] KvStateMachineContract.StreamMatchesSerialize (0 ms)
+[ RUN      ] KvStateMachineContract.SnapshotRoundTrip
+[       OK ] KvStateMachineContract.SnapshotRoundTrip (0 ms)
+[ RUN      ] KvStateMachineContract.RestoreRejectsMalformed
+[       OK ] KvStateMachineContract.RestoreRejectsMalformed (0 ms)
+[----------] 10 tests from KvStateMachineContract (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 10 tests from 1 test suite ran. (1 ms total)
+[  PASSED  ] 9 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] KvStateMachineContract.IdempotentHigherIndexAdvancesApplied
+
+ 1 FAILED TEST
