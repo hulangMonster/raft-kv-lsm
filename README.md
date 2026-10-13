@@ -29,11 +29,20 @@ M6 把存储层适配到本项目的 lsm 引擎（`LsmLogStore`，默认仍是 `
 ### 1. 构建
 
 ```bash
-git clone <this-repo> && cd raft-kv
+git clone git@github.com:hulangMonster/raft-kv-lsm.git && cd raft-kv-lsm
 
 # 出证据/提交数字：必须固定 lsm 基座（见下方警告）
-PIN=/tmp/lsm-pin-51c4672                                  # 最终基座 = ~/lsm-kv @ 51c4672
-git -C ~/lsm-kv archive 51c4672 | tar -x -C "$PIN"
+# 51c4672 是本仓 M6.10 使用的基座；如果本地没有该提交，自动改用当前 lsm HEAD。
+LSM_SHA="${LSM_SHA:-51c4672}"
+if ! git -C ~/lsm-kv cat-file -e "$LSM_SHA^{commit}" 2>/dev/null; then
+  echo "lsm 提交 $LSM_SHA 不存在，改用当前 HEAD"
+  LSM_SHA="$(git -C ~/lsm-kv rev-parse HEAD)"
+fi
+PIN="/tmp/lsm-pin-$LSM_SHA"
+rm -rf "$PIN"
+mkdir -p "$PIN"
+git -C ~/lsm-kv archive "$LSM_SHA" | tar -x -C "$PIN"
+
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DRAFTKV_LSM_DIR="$PIN"
 cmake --build build -j"$(nproc)"
 
@@ -79,28 +88,53 @@ cmake -S . -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_TSAN=ON && c
 > 会明确报错退出，绝不静默降级**）。
 
 ```bash
-PEERS="1=127.0.0.1:19601,2=127.0.0.1:19602,3=127.0.0.1:19603"
+export PEERS="1=127.0.0.1:19601,2=127.0.0.1:19602,3=127.0.0.1:19603"
+BIN="./build/bin"     # 如果只构建了 build-lsm，改成 BIN="./build-lsm/bin"
 
-# 起三个节点（--snapshot-threshold 2000 让小阈值就触发快照/压缩）
+# 如果 19601~19603 已被旧节点占用，先按 PID 停掉，例如：
+# ps -ef | grep '[r]aftkv_raft_node'
+# kill <pid>
+
+# 起三个节点：LSM 日志引擎 + 小快照阈值
 for id in 1 2 3; do
-  ./build/bin/raftkv_raft_node --id $id --port $((19600+id)) --peers "$PEERS" \
-      --data-dir /tmp/raftkv-n$id --snapshot-threshold 2000 > /tmp/raftkv-n$id.log 2>&1 &
+  rm -rf "/tmp/raftkv-n$id"
+
+  "$BIN/raftkv_raft_node" \
+    --id "$id" \
+    --port "$((19600+id))" \
+    --peers "$PEERS" \
+    --data-dir "/tmp/raftkv-n$id" \
+    --log-engine lsm \
+    --snapshot-threshold 2000 \
+    > "/tmp/raftkv-n$id.log" 2>&1 &
+
+  echo $! > "/tmp/raftkv-n$id.pid"
 done
+
 sleep 2
 
-CLI="./build/bin/raftkv_raft_cli --peers $PEERS --host 127.0.0.1 --port 19601"
-$CLI status            # role / term / commit_index / last_applied / snapshot_index / qps / fsync_ms / …
+# 确认三个节点都真的切到了 LSM
+for id in 1 2 3; do
+  echo "--- node$id ---"
+  grep 'log-engine' "/tmp/raftkv-n$id.log"
+done
+
+CLI="$BIN/raftkv_raft_cli --peers $PEERS --host 127.0.0.1 --port 19601"
+$CLI status            # role / term / commit_index / ... / lsm_*
 $CLI put hello world   # -> OK（连 follower 会自动重定向到 Leader）
-$CLI get hello         # -> world（线一致读：ReadIndex + 同任期提交屏障）
+$CLI get hello         # -> world（线性一致读：ReadIndex + 同任期提交屏障）
 
 $CLI fill 20000 --pipeline 64 >/dev/null   # 64 条并发连接批量写
 $CLI verify 20000                          # -> verified 20000 missing 0（硬校验零丢写）
 $CLI snapshot                              # 手动触发快照
 $CLI metrics | head                        # Prometheus 文本（msgType 15）
 $CLI config                                # 当前配置视图（version / members）
-$CLI add 4 127.0.0.1:19604                 # 在线加入（新节点先 CatchUp 追平再进配置）
-$CLI remove 4                              # 在线移除
+# 成员变更需要先启动目标节点并完成 CatchUp；直接对未启动的 node4 执行 add 会超时。
+# 完整流程用：./scripts/raft_membership_e2e.sh
 $CLI                                       # 不带命令 = 交互 REPL（put/get/del/status/…/quit）
+
+# 停止本次启动的节点
+kill $(cat /tmp/raftkv-n1.pid /tmp/raftkv-n2.pid /tmp/raftkv-n3.pid)
 ```
 
 > `--peers` 只是**一个可达种子**：客户端会向任意可达节点索取最新配置（`kConfigRequest`）并按新拓扑路由，
@@ -120,7 +154,10 @@ $CLI                                       # 不带命令 = 交互 REPL（put/ge
 ./scripts/raft_membership_e2e.sh                   # 3→4 在线增删 + 线性一致读
 ./scripts/raft_membership_fault.sh --repeat 50     # 5 节点 + 变更窗口内 kill -9/SIGSTOP
 ./scripts/raft_two_compactions.sh                 # M6.10.5(2)：raft 前缀压缩 × lsm 后台 compaction（64 KiB memtable 逼出后台 compaction；正向标记 lsm_compaction_rounds/snapshot_index；kill -9 后 missing 0）
-./scripts/raft_two_compactions.sh                 # M6.10.5(2)：raft 前缀压缩 × lsm 后台 compaction（64 KiB memtable 逼出后台 compaction；正向标记 lsm_compaction_rounds/snapshot_index；kill -9 后 missing 0）
+
+# 以上脚本默认使用 file 引擎；支持 --log-engine 的脚本可显式切换：
+# ./scripts/raft_e2e.sh --log-engine lsm
+# ./scripts/raft_fault.sh --repeat 50 --log-engine lsm
 ./scripts/raft_e2e_first_put_probe.sh            # M6.10.5(8)：raft_e2e 既有 flake 的聚焦探针（起集群→等 leader→首次 put；--mode raw|retry，可配 --rounds）
 ./scripts/e2e.sh                                   # M1 冒烟 + WAL 崩溃恢复
 ```
@@ -328,7 +365,7 @@ reactor 稳定。默认仍是 `sync`（3 节点下高并发更省 CPU），**计
 ## 目录结构
 
 ```
-raft-kv/
+raft-kv-lsm/
 ├── CMakeLists.txt
 ├── src/
 │   ├── common.h codec.* wal.* store.* thread_pool.* server.*   # M1 单机版
